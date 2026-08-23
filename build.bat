@@ -40,4 +40,4 @@ echo.
 echo ===================================================================
 echo   Build Successful! Launching RougelikeWithAgy.exe...
 echo ===================================================================
-RougelikeWithAgy.exe
+start "" "RougelikeWithAgy.exe"
