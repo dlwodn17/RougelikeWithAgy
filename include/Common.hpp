@@ -155,3 +155,31 @@ inline const char* GetWeatherTitle(WeatherType w) {
         default:                        return "Calm";
     }
 }
+
+// ==========================================
+// Display & 2560x1440 Resolution Configuration
+// ==========================================
+
+struct ScreenConfig {
+    static constexpr int VIRTUAL_WIDTH = 2560;
+    static constexpr int VIRTUAL_HEIGHT = 1440;
+
+    static Vector2 GetVirtualMousePosition() {
+        Vector2 mouse = ::GetMousePosition();
+        int screenW = ::GetScreenWidth();
+        int screenH = ::GetScreenHeight();
+        if (screenW <= 0 || screenH <= 0) return mouse;
+        
+        float scale = std::min((float)screenW / (float)VIRTUAL_WIDTH, (float)screenH / (float)VIRTUAL_HEIGHT);
+        if (scale <= 0.0001f) scale = 1.0f;
+
+        float offsetX = ((float)screenW - ((float)VIRTUAL_WIDTH * scale)) * 0.5f;
+        float offsetY = ((float)screenH - ((float)VIRTUAL_HEIGHT * scale)) * 0.5f;
+        return (Vector2){ (mouse.x - offsetX) / scale, (mouse.y - offsetY) / scale };
+    }
+
+    static void ToggleGameFullscreen() {
+        ::ToggleFullscreen();
+    }
+};
+

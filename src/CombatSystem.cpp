@@ -14,7 +14,7 @@ CombatSystem::CombatSystem()
 
 void CombatSystem::InitializeNewRun() {
     player = Player("Arcane Duelist", 100);
-    player.SetPosition((Vector2){ 260.0f, 320.0f });
+    player.SetPosition((Vector2){ 370.0f, 470.0f });
     currentWave = 1;
     turnCounter = 1;
     selectedSkillIndex = 0;
@@ -37,28 +37,26 @@ void CombatSystem::StartWave(int waveNumber) {
     enemies.clear();
     selectedTargetIndex = 0;
 
-    int screenWidth = 1280;
-
     if (waveNumber == 1) {
         AddCombatLog("--- WAVE 1 / 3: Apprentice & Slime ---", (Color){ 52, 152, 219, 255 });
         Enemy slime("Aquamancer Slime", "Aquamancer Slime", 45, (Color){ 52, 152, 219, 255 }, 1);
-        slime.SetPosition((Vector2){ (float)screenWidth * 0.58f, 300.0f });
+        slime.SetPosition((Vector2){ 1260.0f, 470.0f });
 
         Enemy pyro("Pyromancer", "Pyromancer", 55, (Color){ 231, 76, 60, 255 }, 1);
-        pyro.SetPosition((Vector2){ (float)screenWidth * 0.80f, 300.0f });
+        pyro.SetPosition((Vector2){ 2040.0f, 470.0f });
 
         enemies.push_back(slime);
         enemies.push_back(pyro);
     } else if (waveNumber == 2) {
         AddCombatLog("--- WAVE 2 / 3: Storm & Frost Vanguard ---", (Color){ 155, 89, 182, 255 });
         Enemy slime("Aquamancer Slime", "Aquamancer Slime", 55, (Color){ 52, 152, 219, 255 }, 2);
-        slime.SetPosition((Vector2){ (float)screenWidth * 0.52f, 300.0f });
+        slime.SetPosition((Vector2){ 1005.0f, 470.0f });
 
         Enemy harpy("Storm Harpy", "Storm Harpy", 65, (Color){ 241, 196, 15, 255 }, 2);
-        harpy.SetPosition((Vector2){ (float)screenWidth * 0.70f, 250.0f });
+        harpy.SetPosition((Vector2){ 1605.0f, 470.0f });
 
         Enemy golem("Frost Golem", "Frost Golem", 85, (Color){ 162, 222, 255, 255 }, 2);
-        golem.SetPosition((Vector2){ (float)screenWidth * 0.88f, 320.0f });
+        golem.SetPosition((Vector2){ 2205.0f, 470.0f });
 
         enemies.push_back(slime);
         enemies.push_back(harpy);
@@ -66,13 +64,13 @@ void CombatSystem::StartWave(int waveNumber) {
     } else {
         AddCombatLog("--- WAVE 3 / 3: BOSS: Elemental Archon ---", (Color){ 231, 76, 60, 255 });
         Enemy harpy("Storm Minion", "Storm Harpy", 60, (Color){ 241, 196, 15, 255 }, 3);
-        harpy.SetPosition((Vector2){ (float)screenWidth * 0.52f, 340.0f });
+        harpy.SetPosition((Vector2){ 1005.0f, 470.0f });
 
         Enemy boss("Elemental Archon", "Elemental Archon", 180, (Color){ 230, 126, 34, 255 }, 3);
-        boss.SetPosition((Vector2){ (float)screenWidth * 0.72f, 280.0f });
+        boss.SetPosition((Vector2){ 1605.0f, 470.0f });
 
         Enemy pyro("Pyro Minion", "Pyromancer", 65, (Color){ 231, 76, 60, 255 }, 3);
-        pyro.SetPosition((Vector2){ (float)screenWidth * 0.90f, 340.0f });
+        pyro.SetPosition((Vector2){ 2205.0f, 470.0f });
 
         enemies.push_back(harpy);
         enemies.push_back(boss);

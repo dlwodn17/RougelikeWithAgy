@@ -1,6 +1,6 @@
 # RougelikeWithAgy (Elemental Reaction x Weather Forecast Roguelike)
 
-A tactical 2D turn-based roguelike combat prototype built in **C++17** and **Raylib**, featuring deep environmental interactions and synergistic elemental chain reactions.
+A tactical 2D turn-based roguelike combat prototype built in **C++17** and **Raylib**, featuring deep environmental interactions, synergistic elemental chain reactions, and **native 2560x1440 (QHD) & Fullscreen support**.
 
 ---
 
@@ -46,7 +46,19 @@ No random card draw or mana starvation—combat is driven purely by skill cooldo
 
 ---
 
-## 🎮 Controls
+### 4. Deterministic 6-Step Turn Resolution
+Each turn executes in a strict, predictable pipeline:
+1. **Step 1: Resolve Player Action & Reactions** (Calculates skill damage, reactions, AoE shockwaves)
+2. **Step 2: Resolve Enemy AI Actions & Reactions** (Enemy intents resolve, player shield/parry mitigates)
+3. **Step 3: Tick Status Effects** (Burn damage ticks, status durations decrement)
+4. **Step 4: Tick Player & Enemy Cooldowns** (Skills on cooldown decrease by 1)
+5. **Step 5: Advance Weather Queue & Apply Environmental Effect** (Forecast pops next weather, ambient effect applies)
+6. **Step 6: Reset Turn & Start Next** (Shields refresh, enemy intents calculated for next turn)
+
+---
+
+## 🎮 Controls & Display Options
+- **F11 / Alt + Enter**: Toggle Fullscreen Mode
 - **1, 2, 3, 4**: Select Skill
 - **Click Enemy**: Select Target
 - **Q, W, E**: Select Stance (Attack / Defense / Parry)
@@ -56,24 +68,34 @@ No random card draw or mana starvation—combat is driven purely by skill cooldo
 
 ---
 
+## 🖥️ Display & Resolution
+- **Native Resolution**: 2560 x 1440 (QHD)
+- **Fullscreen**: Supported dynamically with `F11`, `Alt+Enter`, or the on-screen UI button.
+- **Multi-Resolution Scaling**: Automatically scales to 1080p, 1440p, 4K, or custom window sizes maintaining 16:9 aspect ratio with bilinear filtering.
+
+---
+
 ## 🏗️ Architecture & Decoupled Design
 
 ```
 RougelikeWithAgy/
 ├── CMakeLists.txt         # Cross-platform CMake with Raylib FetchContent
 ├── Makefile               # Optional native Makefile
+├── build.bat              # 1-Click Windows build script
+├── README.md              # Documentation
+├── .gitignore
 ├── include/
-│   ├── Common.hpp          # Data models, Enums, Structs, Color helpers
+│   ├── Common.hpp          # Data models, Enums, ScreenConfig (2560x1440), Color helpers
 │   ├── ElementalSystem.hpp # Elemental buffer, Reactions engine, Spread
 │   ├── WeatherSystem.hpp   # 3-turn forecast queue, weather rules & triggers
 │   ├── Entity.hpp          # Entity base, Player, Enemy AI & Intents
 │   ├── SkillSystem.hpp     # 4 active cooldown-based skills
 │   ├── ParticleSystem.hpp  # Weather ambient particles, reaction bursts, floating text
-│   ├── UIRenderer.hpp      # 2D Raylib HUD, forecast ribbon, skill cards, combat log
-│   ├── CombatSystem.hpp    # Turn-phase state machine, Parry logic, wave progression
+│   ├── UIRenderer.hpp      # 2D Raylib 2560x1440 HUD, forecast ribbon, skill cards, combat log
+│   ├── CombatSystem.hpp    # 6-step turn state machine, Parry logic, wave progression
 │   └── GameState.hpp       # Game manager, scene state transitions
 └── src/
-    ├── main.cpp            # Entry point & Raylib window loop
+    ├── main.cpp            # Entry point, 2560x1440 canvas & Fullscreen loop
     ├── Entity.cpp
     ├── ElementalSystem.cpp
     ├── WeatherSystem.cpp
@@ -92,19 +114,15 @@ RougelikeWithAgy/
 - C++17 compatible compiler (GCC / Clang / MSVC)
 - CMake 3.16+
 
-### CMake Build (Recommended)
+### 1-Click Build (Windows)
+Run `build.bat` in the project root directory.
+
+### CMake Build
 ```bash
-# 1. Create build directory
 mkdir build
 cd build
-
-# 2. Configure with CMake (automatically fetches Raylib if not installed locally)
 cmake ..
-
-# 3. Compile
 cmake --build . --config Release
-
-# 4. Run executable
 ./RougelikeWithAgy
 ```
 
