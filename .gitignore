@@ -1,0 +1,32 @@
+# Build directories
+build/
+bin/
+obj/
+out/
+cmake-build-*/
+.cache/
+
+# Visual Studio / IDE files
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+.vscode/
+.idea/
+
+# Executables & libraries
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.pdb
+*.ilk
+*.o
+*.obj
+
+# Third party dependencies (fetched automatically via CMake or build.bat)
+third_party/
+_deps/
