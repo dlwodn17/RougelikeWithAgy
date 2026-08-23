@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 echo ===================================================================
-echo   RougelikeWithAgy - Elemental Reaction x Weather Forecast Prototype
+echo   RougelikeWithAgy - Elemental Reaction x Weather Forecast Roguelike
 echo ===================================================================
 
 set PATH=C:\mingw64\bin;%PATH%
@@ -27,7 +27,7 @@ if not exist libraylib.a (
     del rglfw.o rcore.o rshapes.o rtextures.o rtext.o rmodels.o raudio.o utils.o
 )
 
-g++ -std=c++17 -Wall -Wextra -O2 -Iinclude -Ithird_party/raylib/src src/main.cpp src/Entity.cpp src/ElementalSystem.cpp src/WeatherSystem.cpp src/SkillSystem.cpp src/ParticleSystem.cpp src/UIRenderer.cpp src/CombatSystem.cpp src/GameState.cpp -L. -lraylib -lopengl32 -lgdi32 -lwinmm -o RougelikeWithAgy.exe
+g++ -std=c++17 -Wall -Wextra -O2 -Iinclude -Ithird_party/raylib/src src/main.cpp src/Entity.cpp src/ElementalSystem.cpp src/WeatherSystem.cpp src/SkillSystem.cpp src/ParticleSystem.cpp src/GameRenderer.cpp src/UIRenderer.cpp src/CombatSystem.cpp src/GameState.cpp -L. -lraylib -lopengl32 -lgdi32 -lwinmm -o RougelikeWithAgy.exe
 
 if %errorlevel% neq 0 (
     echo.
