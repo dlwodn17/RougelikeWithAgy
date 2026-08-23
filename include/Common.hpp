@@ -250,10 +250,23 @@ struct ScreenConfig {
 
     static Vector2 GetVirtualMousePosition() {
         Vector2 mouse = ::GetMousePosition();
+        int renderW = ::GetRenderWidth();
+        int renderH = ::GetRenderHeight();
         int screenW = ::GetScreenWidth();
         int screenH = ::GetScreenHeight();
+
         if (screenW <= 0 || screenH <= 0) return mouse;
-        
+
+        // If render framebuffer differs from logical screen size, scale mouse coordinates
+        if (renderW > 0 && screenW > 0 && renderW != screenW) {
+            float dpiScaleX = (float)renderW / (float)screenW;
+            float dpiScaleY = (float)renderH / (float)screenH;
+            mouse.x *= dpiScaleX;
+            mouse.y *= dpiScaleY;
+            screenW = renderW;
+            screenH = renderH;
+        }
+
         float scale = std::min((float)screenW / (float)VIRTUAL_WIDTH, (float)screenH / (float)VIRTUAL_HEIGHT);
         if (scale <= 0.0001f) scale = 1.0f;
 

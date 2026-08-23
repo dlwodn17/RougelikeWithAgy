@@ -10,7 +10,9 @@ void GameManager::Initialize() {
 }
 
 void GameManager::Update(float dt) {
-    // 1. Settings Overlay Navigation
+    Vector2 mousePos = ScreenConfig::GetVirtualMousePosition();
+
+    // 1. Settings Overlay Input Handling
     if (showSettings) {
         if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_O)) {
             showSettings = false;
@@ -48,35 +50,39 @@ void GameManager::Update(float dt) {
             }
         }
 
-        // Mouse click triggers
-        Vector2 mousePos = ScreenConfig::GetVirtualMousePosition();
+        // Mouse click triggers inside Settings Overlay
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            // Resolution buttons
-            float y = (float)renderer.getVirtualHeight() * 0.5f - 500.0f + 190.0f;
             float modalX = (float)renderer.getVirtualWidth() * 0.5f - 750.0f;
+            float modalY = (float)renderer.getVirtualHeight() * 0.5f - 500.0f;
+
+            // Resolution buttons (row 0)
+            float yRes = modalY + 190.0f;
             for (int i = 0; i < 4; ++i) {
-                Rectangle btnRec = { modalX + 60.0f + (float)i * 340.0f, y, 320.0f, 100.0f };
+                Rectangle btnRec = { modalX + 60.0f + (float)i * 340.0f, yRes, 320.0f, 100.0f };
                 if (CheckCollisionPointRec(mousePos, btnRec)) {
                     DisplaySettings::SetResolutionIndex(i);
                     selectedSettingIdx = 0;
+                    return;
                 }
             }
 
-            // Display mode buttons
-            float yMode = y + 185.0f;
+            // Display mode buttons (row 1)
+            float yMode = modalY + 375.0f;
             Rectangle winBtnRec = { modalX + 60.0f, yMode, 400.0f, 90.0f };
             Rectangle fsBtnRec = { modalX + 490.0f, yMode, 400.0f, 90.0f };
             if (CheckCollisionPointRec(mousePos, winBtnRec)) {
                 if (IsWindowFullscreen()) DisplaySettings::ToggleFullscreenMode();
                 selectedSettingIdx = 1;
+                return;
             }
             if (CheckCollisionPointRec(mousePos, fsBtnRec)) {
                 if (!IsWindowFullscreen()) DisplaySettings::ToggleFullscreenMode();
                 selectedSettingIdx = 1;
+                return;
             }
 
-            // Close button
-            Rectangle closeRec = { modalX + 1500.0f * 0.5f - 180.0f, (float)renderer.getVirtualHeight() * 0.5f - 500.0f + 1000.0f - 90.0f, 360.0f, 65.0f };
+            // Close button (row 2)
+            Rectangle closeRec = { modalX + 1500.0f * 0.5f - 180.0f, modalY + 1000.0f - 90.0f, 360.0f, 65.0f };
             if (CheckCollisionPointRec(mousePos, closeRec)) {
                 showSettings = false;
                 return;
@@ -91,7 +97,6 @@ void GameManager::Update(float dt) {
             showGuide = false;
             return;
         }
-        Vector2 mousePos = ScreenConfig::GetVirtualMousePosition();
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             float modalX = (float)renderer.getVirtualWidth() * 0.5f - 700.0f;
             float modalY = (float)renderer.getVirtualHeight() * 0.5f - 480.0f;
@@ -104,7 +109,7 @@ void GameManager::Update(float dt) {
         return;
     }
 
-    // Hotkeys to open menus
+    // Global Hotkeys to open menus
     if (IsKeyPressed(KEY_O)) {
         showSettings = true;
         showGuide = false;
@@ -117,7 +122,6 @@ void GameManager::Update(float dt) {
     }
 
     // Check Header Button Clicks during BATTLE or TITLE
-    Vector2 mousePos = ScreenConfig::GetVirtualMousePosition();
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
         if (state == AppState::BATTLE) {
             Rectangle helpRec = { (float)renderer.getVirtualWidth() - 680.0f, 35.0f, 200.0f, 80.0f };
@@ -152,7 +156,7 @@ void GameManager::Update(float dt) {
         }
     }
 
-    // Main State Progression
+    // 3. State-Specific Input & Logic Progression
     switch (state) {
         case AppState::TITLE:
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
@@ -170,6 +174,80 @@ void GameManager::Update(float dt) {
             break;
 
         case AppState::BATTLE:
+            // Process Player Inputs only during PLAYER_INPUT phase
+            if (combatSystem.GetPhase() == CombatPhase::PLAYER_INPUT) {
+                // Keyboard Skill Selection: 1, 2, 3, 4
+                if (IsKeyPressed(KEY_ONE)) combatSystem.SelectSkill(0);
+                if (IsKeyPressed(KEY_TWO)) combatSystem.SelectSkill(1);
+                if (IsKeyPressed(KEY_THREE)) combatSystem.SelectSkill(2);
+                if (IsKeyPressed(KEY_FOUR)) combatSystem.SelectSkill(3);
+
+                // Keyboard Stance Selection: Q (Attack), W (Defense), E (Parry)
+                if (IsKeyPressed(KEY_Q)) combatSystem.SelectStance(StanceType::ATTACK);
+                if (IsKeyPressed(KEY_W)) combatSystem.SelectStance(StanceType::DEFENSE);
+                if (IsKeyPressed(KEY_E)) combatSystem.SelectStance(StanceType::PARRY);
+
+                // Keyboard Execute Turn: SPACE or ENTER
+                if (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER)) {
+                    combatSystem.ExecutePlayerTurn();
+                }
+
+                // Mouse Click Input Handling
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                    // Stance Buttons Click
+                    Rectangle atkRec = { GameRenderer::STANCE_PANEL_X + 20.0f, GameRenderer::STANCE_PANEL_Y + 65.0f, 180.0f, 170.0f };
+                    Rectangle defRec = { GameRenderer::STANCE_PANEL_X + 220.0f, GameRenderer::STANCE_PANEL_Y + 65.0f, 180.0f, 170.0f };
+                    Rectangle parRec = { GameRenderer::STANCE_PANEL_X + 420.0f, GameRenderer::STANCE_PANEL_Y + 65.0f, 180.0f, 170.0f };
+
+                    if (CheckCollisionPointRec(mousePos, atkRec)) {
+                        combatSystem.SelectStance(StanceType::ATTACK);
+                    } else if (CheckCollisionPointRec(mousePos, defRec)) {
+                        combatSystem.SelectStance(StanceType::DEFENSE);
+                    } else if (CheckCollisionPointRec(mousePos, parRec)) {
+                        combatSystem.SelectStance(StanceType::PARRY);
+                    }
+
+                    // Skill Cards Click
+                    float spacing = 25.0f;
+                    for (int i = 0; i < 4; ++i) {
+                        Rectangle skillRec = { GameRenderer::SKILL_TRAY_X + (float)i * (GameRenderer::SKILL_CARD_W + spacing), GameRenderer::SKILL_TRAY_Y, GameRenderer::SKILL_CARD_W, GameRenderer::SKILL_CARD_H };
+                        if (CheckCollisionPointRec(mousePos, skillRec)) {
+                            combatSystem.SelectSkill(i);
+                        }
+                    }
+
+                    // Enemy Cards Click (Targeting)
+                    const auto& enemies = combatSystem.GetEnemies();
+                    float startX = GameRenderer::ENEMY_START_X;
+                    float cardWidth = 560.0f;
+                    float enemySpacing = 35.0f;
+                    if (enemies.size() == 2) {
+                        startX = 900.0f;
+                        cardWidth = 720.0f;
+                        enemySpacing = 60.0f;
+                    } else if (enemies.size() >= 3) {
+                        startX = 720.0f;
+                        cardWidth = 570.0f;
+                        enemySpacing = 30.0f;
+                    }
+                    for (size_t i = 0; i < enemies.size(); ++i) {
+                        if (enemies[i].IsAlive()) {
+                            Rectangle enemyRec = { startX + (float)i * (cardWidth + enemySpacing), GameRenderer::ENEMY_CARD_Y, cardWidth, GameRenderer::ENEMY_CARD_H };
+                            if (CheckCollisionPointRec(mousePos, enemyRec)) {
+                                combatSystem.SelectTarget((int)i);
+                            }
+                        }
+                    }
+
+                    // Execute Button Click
+                    Rectangle execRec = { GameRenderer::EXECUTE_BTN_X, GameRenderer::EXECUTE_BTN_Y, GameRenderer::EXECUTE_BTN_W, GameRenderer::EXECUTE_BTN_H };
+                    if (CheckCollisionPointRec(mousePos, execRec)) {
+                        combatSystem.ExecutePlayerTurn();
+                    }
+                }
+            }
+
+            // Update combat animations & state machine
             combatSystem.Update(dt);
 
             // Check if CombatSystem entered victory or defeat
