@@ -1,4 +1,4 @@
-#include "ParticleSystem.hpp"
+#include "Renderer/ParticleSystem.hpp"
 #include <random>
 
 static float RandomFloat(float min, float max) {
@@ -93,7 +93,6 @@ void ParticleSystem::SpawnSlashEffect(Vector2 startPos, Vector2 endPos, Color co
 void ParticleSystem::UpdateWeatherParticles(float dt, WeatherType currentWeather) {
     weatherTimer += dt;
 
-    // Spawn ambient weather particles for 2560x1440
     int screenWidth = ScreenConfig::VIRTUAL_WIDTH;
     int screenHeight = ScreenConfig::VIRTUAL_HEIGHT;
 
@@ -208,7 +207,7 @@ void ParticleSystem::Update(float dt, WeatherType currentWeather) {
     for (auto it = floatingTexts.begin(); it != floatingTexts.end();) {
         it->position.x += it->velocity.x * dt;
         it->position.y += it->velocity.y * dt;
-        it->velocity.y += 25.0f * dt; // slight downward deceleration
+        it->velocity.y += 25.0f * dt;
         it->lifetime -= dt;
         it->alpha = std::max(0.0f, it->lifetime / it->maxLifetime);
 
@@ -225,9 +224,9 @@ void ParticleSystem::Draw() {
     for (const auto& p : weatherParticles) {
         Color c = p.color;
         c.a = (unsigned char)(p.alpha * 255.0f);
-        if (p.velocity.y > 300.0f) { // rain streaks
+        if (p.velocity.y > 300.0f) {
             DrawLineEx(p.position, (Vector2){ p.position.x + p.velocity.x * 0.025f, p.position.y + 20.0f }, p.size, c);
-        } else if (p.velocity.x > 400.0f) { // wind streaks
+        } else if (p.velocity.x > 400.0f) {
             DrawLineEx(p.position, (Vector2){ p.position.x - 50.0f, p.position.y }, p.size, c);
         } else {
             DrawCircleV(p.position, p.size, c);
@@ -246,7 +245,7 @@ void ParticleSystem::Draw() {
         }
     }
 
-    // 3. Draw screen flash (for lightning or massive explosion)
+    // 3. Draw screen flash
     if (lightningFlashTimer > 0.0f) {
         DrawRectangle(0, 0, ScreenConfig::VIRTUAL_WIDTH, ScreenConfig::VIRTUAL_HEIGHT, (Color){ 255, 255, 255, 85 });
     }
@@ -260,7 +259,6 @@ void ParticleSystem::Draw() {
         int textWidth = MeasureText(ft.text.c_str(), (int)ft.fontSize);
         Vector2 drawPos = { ft.position.x - textWidth * 0.5f, ft.position.y };
 
-        // Shadow outline
         DrawText(ft.text.c_str(), (int)drawPos.x + 3, (int)drawPos.y + 3, (int)ft.fontSize, shadowColor);
         DrawText(ft.text.c_str(), (int)drawPos.x, (int)drawPos.y, (int)ft.fontSize, textColor);
     }

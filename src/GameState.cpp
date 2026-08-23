@@ -5,7 +5,8 @@ GameManager::GameManager()
 }
 
 void GameManager::Initialize() {
-    renderer.init();
+    uiRenderer.Initialize();
+    combatSystem.SetParticleSystem(&particleSystem);
     combatSystem.InitializeNewRun();
 }
 
@@ -52,8 +53,8 @@ void GameManager::Update(float dt) {
 
         // Mouse click triggers inside Settings Overlay
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            float modalX = (float)renderer.getVirtualWidth() * 0.5f - 750.0f;
-            float modalY = (float)renderer.getVirtualHeight() * 0.5f - 500.0f;
+            float modalX = (float)uiRenderer.GetVirtualWidth() * 0.5f - 750.0f;
+            float modalY = (float)uiRenderer.GetVirtualHeight() * 0.5f - 500.0f;
 
             // Resolution buttons (row 0)
             float yRes = modalY + 190.0f;
@@ -98,8 +99,8 @@ void GameManager::Update(float dt) {
             return;
         }
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            float modalX = (float)renderer.getVirtualWidth() * 0.5f - 700.0f;
-            float modalY = (float)renderer.getVirtualHeight() * 0.5f - 480.0f;
+            float modalX = (float)uiRenderer.GetVirtualWidth() * 0.5f - 700.0f;
+            float modalY = (float)uiRenderer.GetVirtualHeight() * 0.5f - 480.0f;
             Rectangle closeRec = { modalX + 1400.0f * 0.5f - 140.0f, modalY + 960.0f - 90.0f, 280.0f, 60.0f };
             if (CheckCollisionPointRec(mousePos, closeRec)) {
                 showGuide = false;
@@ -124,9 +125,9 @@ void GameManager::Update(float dt) {
     // Check Header Button Clicks during BATTLE or TITLE
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
         if (state == AppState::BATTLE) {
-            Rectangle helpRec = { (float)renderer.getVirtualWidth() - 680.0f, 35.0f, 200.0f, 80.0f };
-            Rectangle optRec = { (float)renderer.getVirtualWidth() - 460.0f, 35.0f, 210.0f, 80.0f };
-            Rectangle fsRec = { (float)renderer.getVirtualWidth() - 230.0f, 35.0f, 190.0f, 80.0f };
+            Rectangle helpRec = { (float)uiRenderer.GetVirtualWidth() - 680.0f, 35.0f, 200.0f, 80.0f };
+            Rectangle optRec = { (float)uiRenderer.GetVirtualWidth() - 460.0f, 35.0f, 210.0f, 80.0f };
+            Rectangle fsRec = { (float)uiRenderer.GetVirtualWidth() - 230.0f, 35.0f, 190.0f, 80.0f };
 
             if (CheckCollisionPointRec(mousePos, helpRec)) {
                 showGuide = true;
@@ -141,7 +142,7 @@ void GameManager::Update(float dt) {
                 return;
             }
         } else if (state == AppState::TITLE) {
-            float titleX = (float)renderer.getVirtualWidth() * 0.5f - 650.0f;
+            float titleX = (float)uiRenderer.GetVirtualWidth() * 0.5f - 650.0f;
             Rectangle optRec = { titleX + 1300.0f * 0.5f - 260.0f, 160.0f + 640.0f, 520.0f, 75.0f };
             Rectangle fsRec = { titleX + 1300.0f * 0.5f - 260.0f, 160.0f + 730.0f, 520.0f, 75.0f };
 
@@ -156,7 +157,7 @@ void GameManager::Update(float dt) {
         }
     }
 
-    // 3. State-Specific Input & Logic Progression
+    // 3. State-Specific Progression
     switch (state) {
         case AppState::TITLE:
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
@@ -164,7 +165,7 @@ void GameManager::Update(float dt) {
                 state = AppState::BATTLE;
             }
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                float titleX = (float)renderer.getVirtualWidth() * 0.5f - 650.0f;
+                float titleX = (float)uiRenderer.GetVirtualWidth() * 0.5f - 650.0f;
                 Rectangle startRec = { titleX + 1300.0f * 0.5f - 260.0f, 160.0f + 540.0f, 520.0f, 85.0f };
                 if (CheckCollisionPointRec(mousePos, startRec)) {
                     combatSystem.InitializeNewRun();
@@ -195,9 +196,9 @@ void GameManager::Update(float dt) {
                 // Mouse Click Input Handling
                 if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                     // Stance Buttons Click
-                    Rectangle atkRec = { GameRenderer::STANCE_PANEL_X + 20.0f, GameRenderer::STANCE_PANEL_Y + 65.0f, 180.0f, 170.0f };
-                    Rectangle defRec = { GameRenderer::STANCE_PANEL_X + 220.0f, GameRenderer::STANCE_PANEL_Y + 65.0f, 180.0f, 170.0f };
-                    Rectangle parRec = { GameRenderer::STANCE_PANEL_X + 420.0f, GameRenderer::STANCE_PANEL_Y + 65.0f, 180.0f, 170.0f };
+                    Rectangle atkRec = { GameConstants::STANCE_PANEL_X + 20.0f, GameConstants::STANCE_PANEL_Y + 65.0f, 180.0f, 170.0f };
+                    Rectangle defRec = { GameConstants::STANCE_PANEL_X + 220.0f, GameConstants::STANCE_PANEL_Y + 65.0f, 180.0f, 170.0f };
+                    Rectangle parRec = { GameConstants::STANCE_PANEL_X + 420.0f, GameConstants::STANCE_PANEL_Y + 65.0f, 180.0f, 170.0f };
 
                     if (CheckCollisionPointRec(mousePos, atkRec)) {
                         combatSystem.SelectStance(StanceType::ATTACK);
@@ -210,7 +211,8 @@ void GameManager::Update(float dt) {
                     // Skill Cards Click
                     float spacing = 25.0f;
                     for (int i = 0; i < 4; ++i) {
-                        Rectangle skillRec = { GameRenderer::SKILL_TRAY_X + (float)i * (GameRenderer::SKILL_CARD_W + spacing), GameRenderer::SKILL_TRAY_Y, GameRenderer::SKILL_CARD_W, GameRenderer::SKILL_CARD_H };
+                        Rectangle skillRec = { GameConstants::SKILL_TRAY_X + (float)i * (GameConstants::SKILL_CARD_W + spacing),
+                                              GameConstants::SKILL_TRAY_Y, GameConstants::SKILL_CARD_W, GameConstants::SKILL_CARD_H };
                         if (CheckCollisionPointRec(mousePos, skillRec)) {
                             combatSystem.SelectSkill(i);
                         }
@@ -218,7 +220,7 @@ void GameManager::Update(float dt) {
 
                     // Enemy Cards Click (Targeting)
                     const auto& enemies = combatSystem.GetEnemies();
-                    float startX = GameRenderer::ENEMY_START_X;
+                    float startX = GameConstants::ENEMY_START_X;
                     float cardWidth = 560.0f;
                     float enemySpacing = 35.0f;
                     if (enemies.size() == 2) {
@@ -232,7 +234,7 @@ void GameManager::Update(float dt) {
                     }
                     for (size_t i = 0; i < enemies.size(); ++i) {
                         if (enemies[i].IsAlive()) {
-                            Rectangle enemyRec = { startX + (float)i * (cardWidth + enemySpacing), GameRenderer::ENEMY_CARD_Y, cardWidth, GameRenderer::ENEMY_CARD_H };
+                            Rectangle enemyRec = { startX + (float)i * (cardWidth + enemySpacing), GameConstants::ENEMY_CARD_Y, cardWidth, GameConstants::ENEMY_CARD_H };
                             if (CheckCollisionPointRec(mousePos, enemyRec)) {
                                 combatSystem.SelectTarget((int)i);
                             }
@@ -240,7 +242,7 @@ void GameManager::Update(float dt) {
                     }
 
                     // Execute Button Click
-                    Rectangle execRec = { GameRenderer::EXECUTE_BTN_X, GameRenderer::EXECUTE_BTN_Y, GameRenderer::EXECUTE_BTN_W, GameRenderer::EXECUTE_BTN_H };
+                    Rectangle execRec = { GameConstants::EXECUTE_BTN_X, GameConstants::EXECUTE_BTN_Y, GameConstants::EXECUTE_BTN_W, GameConstants::EXECUTE_BTN_H };
                     if (CheckCollisionPointRec(mousePos, execRec)) {
                         combatSystem.ExecutePlayerTurn();
                     }
@@ -249,6 +251,7 @@ void GameManager::Update(float dt) {
 
             // Update combat animations & state machine
             combatSystem.Update(dt);
+            particleSystem.Update(dt, combatSystem.GetWeatherSystem().GetCurrentWeather());
 
             // Check if CombatSystem entered victory or defeat
             if (combatSystem.GetPhase() == CombatPhase::VICTORY_SCREEN) {
@@ -264,6 +267,7 @@ void GameManager::Update(float dt) {
             break;
 
         case AppState::VICTORY:
+            particleSystem.Update(dt, combatSystem.GetWeatherSystem().GetCurrentWeather());
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
                 if (combatSystem.GetCurrentWave() >= combatSystem.GetMaxWaves()) {
                     combatSystem.RestartGame();
@@ -273,7 +277,7 @@ void GameManager::Update(float dt) {
                 state = AppState::BATTLE;
             }
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                Rectangle nextRec = { (float)renderer.getVirtualWidth() * 0.5f - 220.0f, (float)renderer.getVirtualHeight() * 0.5f - 350.0f + 480.0f, 440.0f, 90.0f };
+                Rectangle nextRec = { (float)uiRenderer.GetVirtualWidth() * 0.5f - 340.0f, (float)uiRenderer.GetVirtualHeight() * 0.5f - 350.0f + 480.0f, 680.0f, 90.0f };
                 if (CheckCollisionPointRec(mousePos, nextRec)) {
                     if (combatSystem.GetCurrentWave() >= combatSystem.GetMaxWaves()) {
                         combatSystem.RestartGame();
@@ -286,12 +290,13 @@ void GameManager::Update(float dt) {
             break;
 
         case AppState::GAME_OVER:
+            particleSystem.Update(dt, combatSystem.GetWeatherSystem().GetCurrentWeather());
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
                 combatSystem.RestartGame();
                 state = AppState::BATTLE;
             }
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                Rectangle retryRec = { (float)renderer.getVirtualWidth() * 0.5f - 220.0f, (float)renderer.getVirtualHeight() * 0.5f - 350.0f + 480.0f, 440.0f, 90.0f };
+                Rectangle retryRec = { (float)uiRenderer.GetVirtualWidth() * 0.5f - 260.0f, (float)uiRenderer.GetVirtualHeight() * 0.5f - 350.0f + 480.0f, 520.0f, 90.0f };
                 if (CheckCollisionPointRec(mousePos, retryRec)) {
                     combatSystem.RestartGame();
                     state = AppState::BATTLE;
@@ -305,5 +310,5 @@ void GameManager::Update(float dt) {
 }
 
 void GameManager::Draw() {
-    renderer.render(combatSystem, combatSystem.GetParticleSystem(), state, selectedSettingIdx, showGuide, showSettings);
+    uiRenderer.Render(combatSystem, particleSystem, state, selectedSettingIdx, showGuide, showSettings);
 }

@@ -15,18 +15,20 @@ endif()
 # Include directories
 include_directories(include)
 
-# Source files
+# Source files (Modular & Decoupled Hierarchy)
 set(SOURCES
     src/main.cpp
-    src/Entity.cpp
-    src/ElementalSystem.cpp
-    src/WeatherSystem.cpp
-    src/SkillSystem.cpp
-    src/ParticleSystem.cpp
-    src/GameRenderer.cpp
-    src/UIRenderer.cpp
-    src/CombatSystem.cpp
     src/GameState.cpp
+    src/Entities/Entity.cpp
+    src/Entities/Player.cpp
+    src/Entities/Enemy.cpp
+    src/Entities/Skill.cpp
+    src/Systems/ElementalSystem.cpp
+    src/Systems/WeatherSystem.cpp
+    src/Systems/CombatSystem.cpp
+    src/Renderer/ParticleSystem.cpp
+    src/Renderer/CombatRenderer.cpp
+    src/Renderer/UIRenderer.cpp
 )
 
 # Raylib Dependency Strategy

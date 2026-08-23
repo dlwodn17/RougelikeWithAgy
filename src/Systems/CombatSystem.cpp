@@ -1,4 +1,4 @@
-#include "CombatSystem.hpp"
+#include "Systems/CombatSystem.hpp"
 #include <random>
 
 static float GetTimeInSeconds() {
@@ -6,9 +6,9 @@ static float GetTimeInSeconds() {
 }
 
 CombatSystem::CombatSystem() 
-    : currentPhase(CombatPhase::PLAYER_INPUT), phaseTimer(0.0f), currentEnemyActionIndex(0),
-      selectedSkillIndex(0), selectedTargetIndex(0), selectedStance(StanceType::ATTACK),
-      currentWave(1), maxWaves(3), turnCounter(1) {
+    : particleSystem(nullptr), currentPhase(CombatPhase::PLAYER_INPUT), phaseTimer(0.0f),
+      currentEnemyActionIndex(0), selectedSkillIndex(0), selectedTargetIndex(0),
+      selectedStance(StanceType::ATTACK), currentWave(1), maxWaves(3), turnCounter(1) {
     InitializeNewRun();
 }
 
@@ -21,7 +21,10 @@ void CombatSystem::InitializeNewRun() {
     selectedTargetIndex = 0;
     selectedStance = StanceType::ATTACK;
     combatLog.clear();
-    particleSystem.ClearAll();
+
+    if (particleSystem) {
+        particleSystem->ClearAll();
+    }
 
     weatherSystem.Initialize(WeatherType::CLEAR);
     player.ResetCooldowns();
@@ -143,7 +146,7 @@ bool CombatSystem::ExecutePlayerTurn() {
     player.SetStance(selectedStance);
     if (selectedStance == StanceType::DEFENSE) {
         player.AddShield(18);
-        particleSystem.AddFloatingText(player.GetPosition(), "+18 SHIELD", (Color){ 52, 152, 219, 255 });
+        if (particleSystem) particleSystem->AddFloatingText(player.GetPosition(), "+18 SHIELD", (Color){ 52, 152, 219, 255 });
         AddCombatLog("Player enters Defense Stance (+18 Shield, -30% Dmg).", (Color){ 52, 152, 219, 255 });
     } else if (selectedStance == StanceType::ATTACK) {
         AddCombatLog("Player enters Attack Stance (+40% Outgoing Dmg).", (Color){ 231, 76, 60, 255 });
@@ -156,27 +159,20 @@ bool CombatSystem::ExecutePlayerTurn() {
     return true;
 }
 
-// =========================================================================
-// Deterministic 6-Step Turn Resolution Pipeline
-// =========================================================================
-
 // Step 1: Resolve Player Action & Elemental Reactions
 void CombatSystem::Step1_ResolvePlayerAction() {
     Skill* skill = player.GetSkill(selectedSkillIndex);
     if (!skill) return;
 
-    // Trigger cooldown on the skill
     player.UseSkill(selectedSkillIndex);
 
     Enemy& target = enemies[selectedTargetIndex];
     int rawDmg = skill->baseDamage;
 
-    // Stance damage multiplier
     if (selectedStance == StanceType::ATTACK) {
         rawDmg = static_cast<int>(rawDmg * 1.40f);
     }
 
-    // Weather damage modifier
     WeatherType weather = weatherSystem.GetCurrentWeather();
     float weatherMult = 1.0f;
     if (skill->primaryElement == Element::FIRE && weather == WeatherType::HEATWAVE) weatherMult = 1.50f;
@@ -184,10 +180,8 @@ void CombatSystem::Step1_ResolvePlayerAction() {
     else if (skill->primaryElement == Element::COLD && weather == WeatherType::BLIZZARD) weatherMult = 1.35f;
     else if (skill->primaryElement == Element::LIGHTNING && weather == WeatherType::THUNDERSTORM) weatherMult = 1.30f;
 
-    // Execute attack & reaction
     DamageReport report = target.ApplyIncomingDamage(rawDmg, skill->primaryElement, StanceType::ATTACK, weatherMult);
 
-    // Apply secondary element if any (e.g. Ignition Flask applying Oil then Fire)
     if (skill->secondaryElement != Element::NONE && target.IsAlive()) {
         DamageReport secReport = target.ApplyIncomingDamage(0, skill->secondaryElement, StanceType::ATTACK, weatherMult);
         if (secReport.reaction.triggered) {
@@ -195,32 +189,35 @@ void CombatSystem::Step1_ResolvePlayerAction() {
         }
     }
 
-    // Visuals & Floating Text
-    particleSystem.SpawnSlashEffect(player.GetPosition(), target.GetPosition(), skill->themeColor);
-    particleSystem.SpawnHitSparks(target.GetPosition(), skill->primaryElement, 15);
-    particleSystem.AddFloatingText(target.GetPosition(), "-" + std::to_string(report.mitigatedDamage), skill->themeColor, 26.0f);
+    if (particleSystem) {
+        particleSystem->SpawnSlashEffect(player.GetPosition(), target.GetPosition(), skill->themeColor);
+        particleSystem->SpawnHitSparks(target.GetPosition(), skill->primaryElement, 15);
+        particleSystem->AddFloatingText(target.GetPosition(), "-" + std::to_string(report.mitigatedDamage), skill->themeColor, 26.0f);
+    }
 
     AddCombatLog("Player cast [" + skill->name + "] on " + target.GetName() + " for " + std::to_string(report.mitigatedDamage) + " dmg.", skill->themeColor);
 
-    // Handle Reaction Triggered!
     if (report.reaction.triggered) {
-        particleSystem.SpawnReactionBurst(target.GetPosition(), report.reaction.reactionName, report.reaction.reactionColor);
-        particleSystem.AddFloatingText(
-            (Vector2){ target.GetPosition().x, target.GetPosition().y - 35.0f },
-            "★ REACTION: " + report.reaction.reactionName + "!",
-            report.reaction.reactionColor,
-            24.0f,
-            1.6f
-        );
+        if (particleSystem) {
+            particleSystem->SpawnReactionBurst(target.GetPosition(), report.reaction.reactionName, report.reaction.reactionColor);
+            particleSystem->AddFloatingText(
+                (Vector2){ target.GetPosition().x, target.GetPosition().y - 35.0f },
+                "★ REACTION: " + report.reaction.reactionName + "!",
+                report.reaction.reactionColor,
+                24.0f,
+                1.6f
+            );
+        }
         AddCombatLog("[REACTION TRIGGERED: " + report.reaction.reactionName + "] " + report.reaction.description, report.reaction.reactionColor);
 
-        // Chain AoE to other enemies for SHOCK reaction
         if (report.reaction.chainAoE) {
             for (size_t i = 0; i < enemies.size(); ++i) {
                 if (static_cast<int>(i) != selectedTargetIndex && enemies[i].IsAlive()) {
                     DamageReport chainReport = enemies[i].ApplyIncomingDamage(report.reaction.aoeDamage, Element::LIGHTNING);
-                    particleSystem.SpawnHitSparks(enemies[i].GetPosition(), Element::LIGHTNING, 10);
-                    particleSystem.AddFloatingText(enemies[i].GetPosition(), "-" + std::to_string(chainReport.mitigatedDamage) + " ARC", (Color){ 241, 196, 15, 255 });
+                    if (particleSystem) {
+                        particleSystem->SpawnHitSparks(enemies[i].GetPosition(), Element::LIGHTNING, 10);
+                        particleSystem->AddFloatingText(enemies[i].GetPosition(), "-" + std::to_string(chainReport.mitigatedDamage) + " ARC", (Color){ 241, 196, 15, 255 });
+                    }
                     AddCombatLog("-> Shockwave arcs to " + enemies[i].GetName() + " for " + std::to_string(chainReport.mitigatedDamage) + " dmg!", (Color){ 241, 196, 15, 255 });
                 }
             }
@@ -229,7 +226,7 @@ void CombatSystem::Step1_ResolvePlayerAction() {
 
     if (report.causedDeath) {
         AddCombatLog(target.GetName() + " was defeated!", (Color){ 46, 204, 113, 255 });
-        particleSystem.AddFloatingText(target.GetPosition(), "DEFEATED", (Color){ 231, 76, 60, 255 }, 28.0f);
+        if (particleSystem) particleSystem->AddFloatingText(target.GetPosition(), "DEFEATED", (Color){ 231, 76, 60, 255 }, 28.0f);
     }
 }
 
@@ -247,10 +244,9 @@ void CombatSystem::Step2_ResolveEnemyActionStep() {
         return;
     }
 
-    // Check Frozen / Stunned
     if (enemy.IsFrozen()) {
         enemy.SetFrozen(false);
-        particleSystem.AddFloatingText(enemy.GetPosition(), "THAWED (Turn Skipped)", (Color){ 162, 222, 255, 255 });
+        if (particleSystem) particleSystem->AddFloatingText(enemy.GetPosition(), "THAWED (Turn Skipped)", (Color){ 162, 222, 255, 255 });
         AddCombatLog(enemy.GetName() + " is frozen and skips their action!", (Color){ 162, 222, 255, 255 });
         currentEnemyActionIndex++;
         return;
@@ -259,49 +255,53 @@ void CombatSystem::Step2_ResolveEnemyActionStep() {
     const Intent& intent = enemy.GetIntent();
 
     if (intent.type == IntentType::ATTACK) {
-        // Player mitigation & Parry Check
         DamageReport pReport = player.ApplyIncomingDamage(intent.value, intent.element, player.GetStance());
 
-        particleSystem.SpawnSlashEffect(enemy.GetPosition(), player.GetPosition(), enemy.GetColor());
-        particleSystem.SpawnHitSparks(player.GetPosition(), intent.element, 10);
+        if (particleSystem) {
+            particleSystem->SpawnSlashEffect(enemy.GetPosition(), player.GetPosition(), enemy.GetColor());
+            particleSystem->SpawnHitSparks(player.GetPosition(), intent.element, 10);
+        }
 
         if (pReport.wasParried) {
-            // Parry reflect & counter!
             int counterDmg = 12;
             DamageReport counterReport = enemy.ApplyIncomingDamage(counterDmg, intent.element);
             if (intent.element != Element::NONE) {
                 enemy.InflictElement(intent.element, 2);
             }
-            particleSystem.AddFloatingText(player.GetPosition(), "PARRIED! -50%", (Color){ 241, 196, 15, 255 });
-            particleSystem.AddFloatingText(enemy.GetPosition(), "-" + std::to_string(counterReport.mitigatedDamage) + " COUNTER", (Color){ 241, 196, 15, 255 });
+            if (particleSystem) {
+                particleSystem->AddFloatingText(player.GetPosition(), "PARRIED! -50%", (Color){ 241, 196, 15, 255 });
+                particleSystem->AddFloatingText(enemy.GetPosition(), "-" + std::to_string(counterReport.mitigatedDamage) + " COUNTER", (Color){ 241, 196, 15, 255 });
+            }
             AddCombatLog("⚔️ PARRY! Player deflected " + enemy.GetName() + "'s attack and countered for " + std::to_string(counterReport.mitigatedDamage) + " dmg!", (Color){ 241, 196, 15, 255 });
         } else if (pReport.shieldAbsorbed > 0) {
-            particleSystem.AddFloatingText(player.GetPosition(), "SHIELDED (" + std::to_string(pReport.shieldAbsorbed) + ")", (Color){ 52, 152, 219, 255 });
-            if (pReport.healthDamage > 0) {
-                particleSystem.AddFloatingText(player.GetPosition(), "-" + std::to_string(pReport.healthDamage), (Color){ 231, 76, 60, 255 });
+            if (particleSystem) {
+                particleSystem->AddFloatingText(player.GetPosition(), "SHIELDED (" + std::to_string(pReport.shieldAbsorbed) + ")", (Color){ 52, 152, 219, 255 });
+                if (pReport.healthDamage > 0) {
+                    particleSystem->AddFloatingText(player.GetPosition(), "-" + std::to_string(pReport.healthDamage), (Color){ 231, 76, 60, 255 });
+                }
             }
             AddCombatLog(enemy.GetName() + " attacks for " + std::to_string(pReport.mitigatedDamage) + " dmg (Shield absorbed " + std::to_string(pReport.shieldAbsorbed) + ").", (Color){ 231, 76, 60, 255 });
         } else {
-            particleSystem.AddFloatingText(player.GetPosition(), "-" + std::to_string(pReport.healthDamage), (Color){ 231, 76, 60, 255 });
+            if (particleSystem) particleSystem->AddFloatingText(player.GetPosition(), "-" + std::to_string(pReport.healthDamage), (Color){ 231, 76, 60, 255 });
             AddCombatLog(enemy.GetName() + " hits Player for " + std::to_string(pReport.healthDamage) + " dmg.", (Color){ 231, 76, 60, 255 });
         }
     } else if (intent.type == IntentType::DEFEND) {
         enemy.AddShield(intent.value);
-        particleSystem.AddFloatingText(enemy.GetPosition(), "+" + std::to_string(intent.value) + " SHIELD", (Color){ 52, 152, 219, 255 });
+        if (particleSystem) particleSystem->AddFloatingText(enemy.GetPosition(), "+" + std::to_string(intent.value) + " SHIELD", (Color){ 52, 152, 219, 255 });
         AddCombatLog(enemy.GetName() + " casts [" + intent.name + "] gaining " + std::to_string(intent.value) + " Shield.", (Color){ 52, 152, 219, 255 });
     } else if (intent.type == IntentType::DEBUFF) {
         if (player.GetStance() == StanceType::PARRY) {
             enemy.InflictElement(intent.element, 2);
-            particleSystem.AddFloatingText(player.GetPosition(), "PARRIED DEBUFF!", (Color){ 241, 196, 15, 255 });
+            if (particleSystem) particleSystem->AddFloatingText(player.GetPosition(), "PARRIED DEBUFF!", (Color){ 241, 196, 15, 255 });
             AddCombatLog("⚔️ PARRY! Player reflected [" + intent.name + "] back to " + enemy.GetName() + "!", (Color){ 241, 196, 15, 255 });
         } else {
             player.InflictElement(intent.element, 2);
-            particleSystem.AddFloatingText(player.GetPosition(), "+" + std::string(ElementalSystem::GetElementName(intent.element)), GetElementBaseColor(intent.element));
+            if (particleSystem) particleSystem->AddFloatingText(player.GetPosition(), "+" + std::string(ElementalSystem::GetElementName(intent.element)), GetElementBaseColor(intent.element));
             AddCombatLog(enemy.GetName() + " casts [" + intent.name + "] inflicting [" + ElementalSystem::GetElementName(intent.element) + "] on Player.", GetElementBaseColor(intent.element));
         }
     } else if (intent.type == IntentType::BUFF) {
         enemy.Heal(intent.value);
-        particleSystem.AddFloatingText(enemy.GetPosition(), "+" + std::to_string(intent.value) + " HP", (Color){ 46, 204, 113, 255 });
+        if (particleSystem) particleSystem->AddFloatingText(enemy.GetPosition(), "+" + std::to_string(intent.value) + " HP", (Color){ 46, 204, 113, 255 });
         AddCombatLog(enemy.GetName() + " channels [" + intent.name + "].", (Color){ 46, 204, 113, 255 });
     }
 
@@ -323,7 +323,6 @@ void CombatSystem::Step3_TickStatusEffects() {
         AddCombatLog(log, (Color){ 230, 126, 34, 255 });
     }
 
-    // Reset 1-turn temporary shields
     player.ResetShield();
     for (auto& enemy : enemies) {
         enemy.ResetShield();
@@ -338,34 +337,30 @@ void CombatSystem::Step4_TickCooldowns() {
 
 // Step 5: Advance Weather Forecast Queue & Apply Environmental Effect
 void CombatSystem::Step5_AdvanceWeatherAndApply() {
-    // Shift forecast queue and get new active weather
     WeatherType newActiveWeather = weatherSystem.AdvanceTurn();
     WeatherTriggerResult weatherRes = weatherSystem.ProcessTurnStartWeather();
 
     AddCombatLog("[WEATHER SHIFT: " + weatherRes.title + "] " + weatherRes.description, weatherRes.weatherColor);
 
-    // Apply global status to combatants if active
     if (weatherRes.globalStatusToApply != Element::NONE) {
         player.InflictElement(weatherRes.globalStatusToApply, weatherRes.statusDuration);
-        particleSystem.AddFloatingText(player.GetPosition(), "+" + std::string(ElementalSystem::GetElementName(weatherRes.globalStatusToApply)), weatherRes.weatherColor);
+        if (particleSystem) particleSystem->AddFloatingText(player.GetPosition(), "+" + std::string(ElementalSystem::GetElementName(weatherRes.globalStatusToApply)), weatherRes.weatherColor);
 
         for (auto& enemy : enemies) {
             if (enemy.IsAlive()) {
-                // If Blizzard and target is wet -> instant freeze!
                 if (newActiveWeather == WeatherType::BLIZZARD && enemy.HasElement(Element::WET)) {
                     enemy.ClearElement(Element::WET);
                     enemy.SetFrozen(true);
-                    particleSystem.AddFloatingText(enemy.GetPosition(), "FROZEN!", (Color){ 162, 222, 255, 255 }, 24.0f);
+                    if (particleSystem) particleSystem->AddFloatingText(enemy.GetPosition(), "FROZEN!", (Color){ 162, 222, 255, 255 }, 24.0f);
                     AddCombatLog(enemy.GetName() + " is drenched and freezes solid in the blizzard!", (Color){ 162, 222, 255, 255 });
                 } else {
                     enemy.InflictElement(weatherRes.globalStatusToApply, weatherRes.statusDuration);
-                    particleSystem.AddFloatingText(enemy.GetPosition(), "+" + std::string(ElementalSystem::GetElementName(weatherRes.globalStatusToApply)), weatherRes.weatherColor);
+                    if (particleSystem) particleSystem->AddFloatingText(enemy.GetPosition(), "+" + std::string(ElementalSystem::GetElementName(weatherRes.globalStatusToApply)), weatherRes.weatherColor);
                 }
             }
         }
     }
 
-    // Strike random target for Thunderstorm
     if (weatherRes.strikeRandomEnemy) {
         std::vector<int> aliveIndices;
         for (size_t i = 0; i < enemies.size(); ++i) {
@@ -374,14 +369,15 @@ void CombatSystem::Step5_AdvanceWeatherAndApply() {
         if (!aliveIndices.empty()) {
             int targetIdx = aliveIndices[rand() % aliveIndices.size()];
             DamageReport strike = enemies[targetIdx].ApplyIncomingDamage(weatherRes.randomStrikeDamage, Element::LIGHTNING);
-            particleSystem.TriggerScreenFlash(0.15f);
-            particleSystem.SpawnHitSparks(enemies[targetIdx].GetPosition(), Element::LIGHTNING, 20);
-            particleSystem.AddFloatingText(enemies[targetIdx].GetPosition(), "-" + std::to_string(strike.mitigatedDamage) + " LIGHTNING", (Color){ 241, 196, 15, 255 });
+            if (particleSystem) {
+                particleSystem->TriggerScreenFlash(0.15f);
+                particleSystem->SpawnHitSparks(enemies[targetIdx].GetPosition(), Element::LIGHTNING, 20);
+                particleSystem->AddFloatingText(enemies[targetIdx].GetPosition(), "-" + std::to_string(strike.mitigatedDamage) + " LIGHTNING", (Color){ 241, 196, 15, 255 });
+            }
             AddCombatLog("⚡ Lightning bolt strikes " + enemies[targetIdx].GetName() + " for " + std::to_string(strike.mitigatedDamage) + " dmg!", (Color){ 241, 196, 15, 255 });
         }
     }
 
-    // Spread debuffs for Gale Winds
     if (weatherRes.spreadAllDebuffs) {
         std::vector<Element> collectedElements;
         for (const auto& enemy : enemies) {
@@ -405,14 +401,12 @@ void CombatSystem::Step5_AdvanceWeatherAndApply() {
 void CombatSystem::Step6_ResetTurnAndStartNext() {
     turnCounter++;
 
-    // Check alive enemies and update their next intents
     for (auto& enemy : enemies) {
         if (enemy.IsAlive()) {
             enemy.DecideIntent(turnCounter, player, weatherSystem.GetCurrentWeather());
         }
     }
 
-    // Check if target is still alive, otherwise select first alive
     if (selectedTargetIndex >= 0 && selectedTargetIndex < static_cast<int>(enemies.size()) && !enemies[selectedTargetIndex].IsAlive()) {
         for (size_t i = 0; i < enemies.size(); ++i) {
             if (enemies[i].IsAlive()) {
@@ -451,7 +445,7 @@ void CombatSystem::CheckBattleEndConditions() {
 void CombatSystem::NextWave() {
     if (currentWave < maxWaves) {
         currentWave++;
-        player.Heal(25); // Roguelike wave heal
+        player.Heal(25);
         player.ResetCooldowns();
         StartWave(currentWave);
     } else {
@@ -464,20 +458,16 @@ void CombatSystem::RestartGame() {
 }
 
 void CombatSystem::Update(float dt) {
-    // Update visual offsets and shake timers
     player.UpdateVisuals(dt);
     for (auto& enemy : enemies) {
         enemy.UpdateVisuals(dt);
     }
-
-    particleSystem.Update(dt, weatherSystem.GetCurrentWeather());
 
     if (phaseTimer > 0.0f) {
         phaseTimer -= dt;
         return;
     }
 
-    // Step through the deterministic turn resolution pipeline
     switch (currentPhase) {
         case CombatPhase::RESOLVE_PLAYER_ACTION:
             Step1_ResolvePlayerAction();

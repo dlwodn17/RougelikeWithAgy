@@ -1,9 +1,9 @@
 #include "raylib.h"
 #include "GameState.hpp"
-#include "Common.hpp"
+#include "Core/Constants.hpp"
 
 int main() {
-    // Window & Display Configuration (No FLAG_WINDOW_HIGHDPI to prevent Windows viewport scaling mismatches)
+    // Window & Display Configuration
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
     
     // Auto-detect best initial window size based on monitor resolution
@@ -27,7 +27,7 @@ int main() {
         }
     }
 
-    InitWindow(initWinWidth, initWinHeight, "RougelikeWithAgy - Elemental Reaction Roguelike");
+    InitWindow(initWinWidth, initWinHeight, "RougelikeWithAgy - Elemental Convergence Roguelike");
     SetWindowMinSize(960, 540);
     SetTargetFPS(60);
 
@@ -52,7 +52,7 @@ int main() {
         }
 
         float dt = GetFrameTime();
-        if (dt > 0.1f) dt = 0.1f; // Cap delta time to prevent spiral of death on lag spikes
+        if (dt > 0.1f) dt = 0.1f; // Cap delta time
 
         // 1. Update Game Logic
         game.Update(dt);
@@ -63,7 +63,7 @@ int main() {
         game.Draw();
         EndTextureMode();
 
-        // 3. Render Canvas Scaled to Physical Framebuffer (with exact 16:9 aspect ratio)
+        // 3. Render Canvas Scaled to Physical Framebuffer (16:9 aspect ratio)
         BeginDrawing();
         ClearBackground(BLACK);
 

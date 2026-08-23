@@ -1,3 +1,3 @@
 #pragma once
-
-#include "GameRenderer.hpp"
+#include "Renderer/UIRenderer.hpp"
+#include "Renderer/CombatRenderer.hpp"

@@ -1,14 +1,16 @@
 #pragma once
 
-#include "Common.hpp"
-#include "CombatSystem.hpp"
-#include "GameRenderer.hpp"
+#include "Core/Constants.hpp"
+#include "Systems/CombatSystem.hpp"
+#include "Renderer/ParticleSystem.hpp"
+#include "Renderer/UIRenderer.hpp"
 
 class GameManager {
 private:
     AppState state;
+    ParticleSystem particleSystem;
     CombatSystem combatSystem;
-    GameRenderer renderer;
+    UIRenderer uiRenderer;
     bool showSettings;
     bool showGuide;
     int selectedSettingIdx;
