@@ -9,11 +9,28 @@ void GameManager::Initialize() {
 }
 
 void GameManager::Update(float dt) {
+    // Check Modal dismissals
+    if (uiRenderer.IsOptionsModalVisible()) {
+        if (IsKeyPressed(KEY_ESCAPE)) {
+            uiRenderer.ToggleOptionsModal();
+            return;
+        }
+    }
+
+    if (uiRenderer.IsCheatSheetVisible()) {
+        if (IsKeyPressed(KEY_ESCAPE)) {
+            uiRenderer.ToggleCheatSheet();
+            return;
+        }
+    }
+
     switch (state) {
         case AppState::TITLE:
-            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
-                combatSystem.InitializeNewRun();
-                state = AppState::BATTLE;
+            if (!uiRenderer.IsOptionsModalVisible() && !uiRenderer.IsCheatSheetVisible()) {
+                if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
+                    combatSystem.InitializeNewRun();
+                    state = AppState::BATTLE;
+                }
             }
             break;
 

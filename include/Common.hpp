@@ -157,8 +157,65 @@ inline const char* GetWeatherTitle(WeatherType w) {
 }
 
 // ==========================================
-// Display & 2560x1440 Resolution Configuration
+// Display & Multi-Resolution (up to QHD) Options
 // ==========================================
+
+struct ResolutionOption {
+    int width;
+    int height;
+    const char* label;
+    const char* tag;
+};
+
+class DisplaySettings {
+private:
+    static inline int currentResolutionIndex = 3; // Default to 2560x1440 (QHD)
+
+public:
+    static const std::vector<ResolutionOption>& GetResolutions() {
+        static const std::vector<ResolutionOption> resList = {
+            { 1280, 720,  "1280 x 720",  "HD (720p)" },
+            { 1600, 900,  "1600 x 900",  "HD+ (900p)" },
+            { 1920, 1080, "1920 x 1080", "FHD (1080p)" },
+            { 2560, 1440, "2560 x 1440", "QHD (1440p) ★" }
+        };
+        return resList;
+    }
+
+    static int GetCurrentResolutionIndex() {
+        return currentResolutionIndex;
+    }
+
+    static void SetResolutionIndex(int index) {
+        const auto& list = GetResolutions();
+        if (index >= 0 && index < static_cast<int>(list.size())) {
+            currentResolutionIndex = index;
+            if (!IsWindowFullscreen()) {
+                SetWindowSize(list[index].width, list[index].height);
+                int monitor = GetCurrentMonitor();
+                int monW = GetMonitorWidth(monitor);
+                int monH = GetMonitorHeight(monitor);
+                SetWindowPosition((monW - list[index].width) / 2, (monH - list[index].height) / 2);
+            }
+        }
+    }
+
+    static void ToggleFullscreenMode() {
+        ::ToggleFullscreen();
+        if (!IsWindowFullscreen()) {
+            const auto& list = GetResolutions();
+            SetWindowSize(list[currentResolutionIndex].width, list[currentResolutionIndex].height);
+            int monitor = GetCurrentMonitor();
+            int monW = GetMonitorWidth(monitor);
+            int monH = GetMonitorHeight(monitor);
+            SetWindowPosition((monW - list[currentResolutionIndex].width) / 2, (monH - list[currentResolutionIndex].height) / 2);
+        }
+    }
+
+    static bool IsFullscreenMode() {
+        return IsWindowFullscreen();
+    }
+};
 
 struct ScreenConfig {
     static constexpr int VIRTUAL_WIDTH = 2560;
@@ -179,7 +236,8 @@ struct ScreenConfig {
     }
 
     static void ToggleGameFullscreen() {
-        ::ToggleFullscreen();
+        DisplaySettings::ToggleFullscreenMode();
     }
 };
+
 

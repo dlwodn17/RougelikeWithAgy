@@ -2,7 +2,7 @@
 #include <iomanip>
 #include <sstream>
 
-UIRenderer::UIRenderer() : fontLoaded(false), showCheatSheet(false) {
+UIRenderer::UIRenderer() : fontLoaded(false), showCheatSheet(false), showOptionsModal(false) {
 }
 
 UIRenderer::~UIRenderer() {
@@ -96,25 +96,34 @@ void UIRenderer::DrawWeatherForecast(const WeatherSystem& weatherSystem) {
     float startX = 890;
     for (size_t i = 0; i < queue.size() && i < 3; ++i) {
         WeatherType nextW = queue[i];
-        Rectangle nextRec = { startX + (float)i * 350, 30, 330, 90 };
+        Rectangle nextRec = { startX + (float)i * 320, 30, 300, 90 };
         DrawCustomCard(nextRec, (Color){ 25, 30, 42, 200 }, (Color){ 60, 70, 90, 200 }, 0.10f);
 
         std::string turnLabel = "+" + std::to_string(i + 1) + " Turn: " + WeatherSystem::GetWeatherName(nextW);
-        DrawText(turnLabel.c_str(), (int)nextRec.x + 18, 42, 20, WeatherSystem::GetWeatherColor(nextW));
-        DrawText(WeatherSystem::GetWeatherShortDesc(nextW), (int)nextRec.x + 18, 74, 15, (Color){ 160, 170, 190, 255 });
+        DrawText(turnLabel.c_str(), (int)nextRec.x + 16, 42, 19, WeatherSystem::GetWeatherColor(nextW));
+        DrawText(WeatherSystem::GetWeatherShortDesc(nextW), (int)nextRec.x + 16, 74, 15, (Color){ 160, 170, 190, 255 });
     }
 
     // Reaction Guide Button
-    Rectangle helpRec = { (float)w - 560, 35, 240, 80 };
-    bool clickedHelp = DrawButton(helpRec, showCheatSheet ? "Guide [H]" : "Guide [H]", (Color){ 41, 128, 185, 255 }, (Color){ 52, 152, 219, 255 });
+    Rectangle helpRec = { (float)w - 680, 35, 200, 80 };
+    bool clickedHelp = DrawButton(helpRec, "Guide [H]", (Color){ 41, 128, 185, 255 }, (Color){ 52, 152, 219, 255 });
     if (clickedHelp || IsKeyPressed(KEY_H) || IsKeyPressed(KEY_TAB)) {
         showCheatSheet = !showCheatSheet;
+        if (showCheatSheet) showOptionsModal = false;
+    }
+
+    // Video & Resolution Options Button
+    Rectangle optRec = { (float)w - 460, 35, 210, 80 };
+    bool clickedOpt = DrawButton(optRec, "⚙️ Options [O]", (Color){ 39, 174, 96, 255 }, (Color){ 46, 204, 113, 255 });
+    if (clickedOpt || IsKeyPressed(KEY_O)) {
+        showOptionsModal = !showOptionsModal;
+        if (showOptionsModal) showCheatSheet = false;
     }
 
     // Fullscreen Toggle Button (F11)
-    Rectangle fsRec = { (float)w - 290, 35, 220, 80 };
+    Rectangle fsRec = { (float)w - 230, 35, 190, 80 };
     bool isFs = IsWindowFullscreen();
-    std::string fsText = isFs ? "Window [F11]" : "Full [F11]";
+    std::string fsText = isFs ? "Window" : "Full [F11]";
     if (DrawButton(fsRec, fsText.c_str(), (Color){ 108, 92, 231, 255 }, (Color){ 155, 89, 182, 255 }) || IsKeyPressed(KEY_F11)) {
         ScreenConfig::ToggleGameFullscreen();
     }
@@ -219,7 +228,7 @@ void UIRenderer::DrawPlayerCard(const Player& player, StanceType selectedStance)
     DrawText("• Stance: [Q] Attack (+40% DMG) [W] Defense [E] Parry", (int)traitRec.x + 20, (int)traitRec.y + 85, 17, (Color){ 190, 200, 220, 255 });
     DrawText("• Execution: Press [SPACE] or [ENTER] to Execute Turn", (int)traitRec.x + 20, (int)traitRec.y + 115, 17, (Color){ 190, 200, 220, 255 });
     DrawText("• Reactions: Combine WET + ELEC (Shock) / OIL + FIRE (Explosion)", (int)traitRec.x + 20, (int)traitRec.y + 145, 17, (Color){ 241, 196, 15, 255 });
-    DrawText("• Press [F11] to Toggle Fullscreen anytime", (int)traitRec.x + 20, (int)traitRec.y + 175, 17, (Color){ 108, 92, 231, 255 });
+    DrawText("• Press [O] for Options / Resolution | [F11] Fullscreen", (int)traitRec.x + 20, (int)traitRec.y + 175, 17, (Color){ 108, 92, 231, 255 });
 }
 
 void UIRenderer::DrawEnemyCards(CombatSystem& combat) {
@@ -286,7 +295,7 @@ void UIRenderer::DrawEnemyCards(CombatSystem& combat) {
 
         // Health Bar
         DrawText("HP & SHIELD", (int)rec.x + 25, (int)rec.y + 160, 18, (Color){ 160, 175, 200, 255 });
-        DrawHealthBar((Vector2){ rec.x + 25, rec.y + 190 }, (Vector2){ rec.width - 50, 42 }, enemy.GetHp(), enemy.GetMaxHp(), enemy.GetShield(), (Color){ 231, 76, 60, 255 });
+        DrawHealthBar((Vector2){ rec.x + 25.0f, rec.y + 190.0f }, (Vector2){ rec.width - 50.0f, 42.0f }, enemy.GetHp(), enemy.GetMaxHp(), enemy.GetShield(), (Color){ 231, 76, 60, 255 });
 
         // Status Buffer
         DrawText("STATUS EFFECT BUFFER:", (int)rec.x + 25, (int)rec.y + 255, 18, (Color){ 160, 175, 200, 255 });
@@ -428,6 +437,85 @@ void UIRenderer::DrawCombatLog(const std::vector<CombatLogEntry>& log) {
     }
 }
 
+void UIRenderer::DrawOptionsModal() {
+    int w = ScreenConfig::VIRTUAL_WIDTH;
+    int h = ScreenConfig::VIRTUAL_HEIGHT;
+
+    // Dark backdrop
+    DrawRectangle(0, 0, w, h, (Color){ 10, 12, 18, 235 });
+
+    Rectangle modalRec = { (float)w * 0.5f - 750, (float)h * 0.5f - 500, 1500, 1000 };
+    DrawCustomCard(modalRec, (Color){ 24, 30, 45, 255 }, (Color){ 241, 196, 15, 255 }, 0.06f);
+
+    DrawText("⚙️ VIDEO & DISPLAY RESOLUTION OPTIONS", (int)modalRec.x + 50, (int)modalRec.y + 45, 34, (Color){ 241, 196, 15, 255 });
+    DrawText("Select resolution up to QHD (2560x1440) or toggle Fullscreen mode.", (int)modalRec.x + 50, (int)modalRec.y + 90, 20, (Color){ 180, 190, 210, 255 });
+
+    // 1. Resolution Options Section
+    float y = modalRec.y + 145;
+    DrawText("OUTPUT RESOLUTION (UP TO QHD 2560x1440):", (int)modalRec.x + 50, (int)y, 24, WHITE);
+    y += 45;
+
+    const auto& resList = DisplaySettings::GetResolutions();
+    int currentResIdx = DisplaySettings::GetCurrentResolutionIndex();
+
+    for (size_t i = 0; i < resList.size(); ++i) {
+        Rectangle btnRec = { modalRec.x + 60 + (float)i * 340, y, 320, 100 };
+        bool isActive = (static_cast<int>(i) == currentResIdx);
+
+        std::string btnText = std::string(resList[i].label) + "\n\n" + resList[i].tag;
+        if (DrawButton(btnRec, btnText.c_str(), (Color){ 30, 38, 55, 255 }, (Color){ 41, 128, 185, 255 }, isActive)) {
+            DisplaySettings::SetResolutionIndex((int)i);
+        }
+    }
+
+    y += 140;
+
+    // 2. Display Mode Section
+    DrawText("DISPLAY MODE:", (int)modalRec.x + 50, (int)y, 24, WHITE);
+    y += 45;
+
+    bool isFs = IsWindowFullscreen();
+    Rectangle winBtnRec = { modalRec.x + 60, y, 400, 90 };
+    Rectangle fsBtnRec = { modalRec.x + 490, y, 400, 90 };
+
+    if (DrawButton(winBtnRec, "🗖 Windowed Mode", (Color){ 30, 38, 55, 255 }, (Color){ 52, 152, 219, 255 }, !isFs)) {
+        if (isFs) DisplaySettings::ToggleFullscreenMode();
+    }
+
+    if (DrawButton(fsBtnRec, "⛶ Fullscreen Mode [F11]", (Color){ 30, 38, 55, 255 }, (Color){ 108, 92, 231, 255 }, isFs)) {
+        if (!isFs) DisplaySettings::ToggleFullscreenMode();
+    }
+
+    y += 135;
+
+    // 3. Technical Hardware & Canvas Information Box
+    Rectangle infoRec = { modalRec.x + 50, y, modalRec.width - 100, 240 };
+    DrawRectangleRounded(infoRec, 0.08f, 6, (Color){ 18, 22, 34, 230 });
+    DrawRectangleRoundedLinesEx(infoRec, 0.08f, 6, 2.0f, (Color){ 65, 75, 95, 255 });
+
+    int monitor = GetCurrentMonitor();
+    int monW = GetMonitorWidth(monitor);
+    int monH = GetMonitorHeight(monitor);
+
+    DrawText("GRAPHICS & HARDWARE SPECIFICATIONS:", (int)infoRec.x + 25, (int)infoRec.y + 20, 20, (Color){ 241, 196, 15, 255 });
+    
+    std::string internalRes = "• Internal Render Target Canvas: 2560 x 1440 (Native QHD High-DPI Vector Buffer)";
+    std::string scalingMode = "• Scaling Pipeline: Hardware Bilinear Filtering + 16:9 Letterboxing Filter";
+    std::string monInfo = "• Primary Monitor Native Resolution: " + std::to_string(monW) + " x " + std::to_string(monH);
+    std::string currentWin = "• Current Window / Screen Output: " + std::to_string(GetScreenWidth()) + " x " + std::to_string(GetScreenHeight()) + (isFs ? " (Fullscreen)" : " (Windowed)");
+
+    DrawText(internalRes.c_str(), (int)infoRec.x + 25, (int)infoRec.y + 60, 18, (Color){ 190, 200, 220, 255 });
+    DrawText(scalingMode.c_str(), (int)infoRec.x + 25, (int)infoRec.y + 95, 18, (Color){ 190, 200, 220, 255 });
+    DrawText(monInfo.c_str(), (int)infoRec.x + 25, (int)infoRec.y + 130, 18, (Color){ 190, 200, 220, 255 });
+    DrawText(currentWin.c_str(), (int)infoRec.x + 25, (int)infoRec.y + 165, 18, (Color){ 46, 204, 113, 255 });
+
+    // Close & Save Button
+    Rectangle closeRec = { modalRec.x + modalRec.width * 0.5f - 180, modalRec.y + modalRec.height - 90, 360, 65 };
+    if (DrawButton(closeRec, "Apply & Close [ESC / O]", (Color){ 39, 174, 96, 255 }, (Color){ 46, 204, 113, 255 })) {
+        showOptionsModal = false;
+    }
+}
+
 void UIRenderer::DrawSynergyGuideModal() {
     int w = ScreenConfig::VIRTUAL_WIDTH;
     int h = ScreenConfig::VIRTUAL_HEIGHT;
@@ -498,6 +586,11 @@ void UIRenderer::DrawCombatScreen(CombatSystem& combat) {
     if (showCheatSheet) {
         DrawSynergyGuideModal();
     }
+
+    // Draw Options Modal if toggled
+    if (showOptionsModal) {
+        DrawOptionsModal();
+    }
 }
 
 void UIRenderer::DrawTitleScreen() {
@@ -506,38 +599,51 @@ void UIRenderer::DrawTitleScreen() {
 
     DrawBackground(WeatherType::THUNDERSTORM);
 
-    Rectangle titleCard = { (float)w * 0.5f - 650, 180, 1300, 950 };
+    Rectangle titleCard = { (float)w * 0.5f - 650, 160, 1300, 980 };
     DrawCustomCard(titleCard, (Color){ 20, 25, 38, 245 }, (Color){ 241, 196, 15, 255 }, 0.06f);
 
-    int titleY = 240;
+    int titleY = 210;
     DrawText("ROGUELIKE : ELEMENTAL NEXUS", (int)titleCard.x + 220, titleY, 50, (Color){ 241, 196, 15, 255 });
-    DrawText("2560x1440 Fullscreen Tactical Roguelike Prototype", (int)titleCard.x + 360, titleY + 65, 24, (Color){ 180, 190, 210, 255 });
+    DrawText("Tactical Roguelike Prototype (Multi-Resolution up to QHD 2560x1440)", (int)titleCard.x + 240, titleY + 65, 24, (Color){ 180, 190, 210, 255 });
 
     // Feature highlights
-    float y = titleY + 135;
-    DrawText("CORE GAMEPLAY ARCHITECTURE:", (int)titleCard.x + 90, (int)y, 26, WHITE);
-    y += 45;
+    float y = titleY + 125;
+    DrawText("CORE GAMEPLAY & RESOLUTION FEATURES:", (int)titleCard.x + 90, (int)y, 26, WHITE);
+    y += 42;
     DrawText("1. Weather Forecast Queue: Track upcoming weather 1-3 turns in advance.", (int)titleCard.x + 110, (int)y, 22, (Color){ 52, 152, 219, 255 });
-    y += 40;
+    y += 38;
     DrawText("2. Elemental Chain Reactions: Combine WET + ELEC (Shock), OIL + FIRE (Explosion), etc.", (int)titleCard.x + 110, (int)y, 22, (Color){ 231, 76, 60, 255 });
-    y += 40;
+    y += 38;
     DrawText("3. Stance Strategy: Switch between Attack (+40% DMG), Defense, and Parry.", (int)titleCard.x + 110, (int)y, 22, (Color){ 46, 204, 113, 255 });
-    y += 40;
+    y += 38;
     DrawText("4. Cooldown-based Skills: Pure tactical timing, zero mana RNG.", (int)titleCard.x + 110, (int)y, 22, (Color){ 162, 222, 255, 255 });
-    y += 40;
-    DrawText("5. Display: Native 2560x1440 Resolution & Fullscreen Toggle [F11].", (int)titleCard.x + 110, (int)y, 22, (Color){ 241, 196, 15, 255 });
+    y += 38;
+    DrawText("5. Display Options: Choose HD (720p), HD+ (900p), FHD (1080p), or QHD (1440p)!", (int)titleCard.x + 110, (int)y, 22, (Color){ 241, 196, 15, 255 });
 
     // Start Button
-    Rectangle startRec = { titleCard.x + titleCard.width * 0.5f - 240, titleCard.y + 570, 480, 90 };
+    Rectangle startRec = { titleCard.x + titleCard.width * 0.5f - 260, titleCard.y + 540, 520, 85 };
     DrawButton(startRec, "START EXPEDITION [ENTER]", (Color){ 39, 174, 96, 255 }, (Color){ 46, 204, 113, 255 }, true);
 
+    // Options Button
+    Rectangle optRec = { titleCard.x + titleCard.width * 0.5f - 260, titleCard.y + 640, 520, 75 };
+    if (DrawButton(optRec, "⚙️ VIDEO OPTIONS (UP TO QHD) [O]", (Color){ 41, 128, 185, 255 }, (Color){ 52, 152, 219, 255 }) || IsKeyPressed(KEY_O)) {
+        showOptionsModal = !showOptionsModal;
+    }
+
     // Fullscreen Button
-    Rectangle fsRec = { titleCard.x + titleCard.width * 0.5f - 240, titleCard.y + 680, 480, 75 };
-    if (DrawButton(fsRec, "TOGGLE FULLSCREEN [F11]", (Color){ 108, 92, 231, 255 }, (Color){ 155, 89, 182, 255 }) || IsKeyPressed(KEY_F11)) {
+    Rectangle fsRec = { titleCard.x + titleCard.width * 0.5f - 260, titleCard.y + 730, 520, 75 };
+    bool isFs = IsWindowFullscreen();
+    std::string fsText = isFs ? "🗖 TOGGLE WINDOWED MODE [F11]" : "⛶ TOGGLE FULLSCREEN [F11]";
+    if (DrawButton(fsRec, fsText.c_str(), (Color){ 108, 92, 231, 255 }, (Color){ 155, 89, 182, 255 }) || IsKeyPressed(KEY_F11)) {
         ScreenConfig::ToggleGameFullscreen();
     }
 
-    DrawText("Press ENTER or Space to Start | Press F11 for Fullscreen | Press H for Guide", (int)titleCard.x + 280, (int)titleCard.y + 820, 22, (Color){ 140, 150, 170, 255 });
+    DrawText("Press ENTER to Start | Press O for Resolution Options | Press F11 for Fullscreen", (int)titleCard.x + 230, (int)titleCard.y + 860, 22, (Color){ 140, 150, 170, 255 });
+
+    // Draw Options Modal if open on title screen
+    if (showOptionsModal) {
+        DrawOptionsModal();
+    }
 }
 
 void UIRenderer::DrawVictoryScreen(const CombatSystem& combat) {

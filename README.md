@@ -57,7 +57,8 @@ Each turn executes in a strict, predictable pipeline:
 
 ---
 
-## 🎮 Controls & Display Options
+## 🎮 Controls & Hotkeys
+- **O / ESC**: Toggle Video & Resolution Options Menu (Select up to QHD 2560x1440)
 - **F11 / Alt + Enter**: Toggle Fullscreen Mode
 - **1, 2, 3, 4**: Select Skill
 - **Click Enemy**: Select Target
@@ -68,10 +69,17 @@ Each turn executes in a strict, predictable pipeline:
 
 ---
 
-## 🖥️ Display & Resolution
-- **Native Resolution**: 2560 x 1440 (QHD)
-- **Fullscreen**: Supported dynamically with `F11`, `Alt+Enter`, or the on-screen UI button.
-- **Multi-Resolution Scaling**: Automatically scales to 1080p, 1440p, 4K, or custom window sizes maintaining 16:9 aspect ratio with bilinear filtering.
+## 🖥️ Display & Resolution Options Menu
+The game includes a dedicated in-game **Video Options Menu** (`[O]` / `[⚙️ Options]` button):
+- **Selectable Resolutions (Up to QHD)**:
+  - `1280 x 720 (HD - 720p)`
+  - `1600 x 900 (HD+ - 900p)`
+  - `1920 x 1080 (FHD - 1080p)`
+  - `2560 x 1440 (QHD - 1440p / 2K) ★`
+- **Display Modes**:
+  - `Windowed Mode` (Centered on monitor)
+  - `Fullscreen Mode` (`F11` / `Alt+Enter` / Button)
+- **Rendering Pipeline**: Internal Native 2560x1440 QHD Vector Target Buffer with Hardware Bilinear Scaling & 16:9 Letterboxing Filter.
 
 ---
 

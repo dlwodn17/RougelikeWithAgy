@@ -8,6 +8,7 @@ private:
     Font customFont;
     bool fontLoaded;
     bool showCheatSheet;
+    bool showOptionsModal;
 
 public:
     UIRenderer();
@@ -19,9 +20,13 @@ public:
     void DrawVictoryScreen(const CombatSystem& combat);
     void DrawDefeatScreen(const CombatSystem& combat);
     void DrawSynergyGuideModal();
+    void DrawOptionsModal();
 
     bool IsCheatSheetVisible() const { return showCheatSheet; }
     void ToggleCheatSheet() { showCheatSheet = !showCheatSheet; }
+
+    bool IsOptionsModalVisible() const { return showOptionsModal; }
+    void ToggleOptionsModal() { showOptionsModal = !showOptionsModal; }
 
 private:
     void DrawBackground(WeatherType weather);
