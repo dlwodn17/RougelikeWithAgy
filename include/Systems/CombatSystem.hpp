@@ -43,13 +43,11 @@ public:
     void SelectStance(StanceType stance);
     bool ExecutePlayerTurn();
 
-    // Deterministic 6-Step Turn Resolution Pipeline
-    void Step1_ResolvePlayerAction();
-    void Step2_ResolveEnemyActionStep();
-    void Step3_TickStatusEffects();
-    void Step4_TickCooldowns();
-    void Step5_AdvanceWeatherAndApply();
-    void Step6_ResetTurnAndStartNext();
+    // 5-Stage Turn Lifecycle State Machine
+    void Step2_ResolvePlayerAction();
+    void Step3_ApplyWeatherEffects();
+    void Step4_ResolveEnemyActionStep();
+    void Step5_EndRoundTick();
 
     // Progression
     void NextWave();

@@ -1,4 +1,5 @@
 #include "Renderer/CombatRenderer.hpp"
+#include "Renderer/WeatherRenderer.hpp"
 #include <iomanip>
 #include <sstream>
 
@@ -71,76 +72,11 @@ void CombatRenderer::DrawStatusBadges(const std::vector<StatusInstance>& statuse
 }
 
 void CombatRenderer::DrawBackground(WeatherType weather) {
-    int w = ScreenConfig::VIRTUAL_WIDTH;
-    int h = ScreenConfig::VIRTUAL_HEIGHT;
-
-    Color topCol = (Color){ 15, 20, 30, 255 };
-    Color botCol = (Color){ 25, 30, 45, 255 };
-
-    if (weather == WeatherType::HEATWAVE) {
-        topCol = (Color){ 40, 20, 18, 255 };
-        botCol = (Color){ 50, 28, 22, 255 };
-    } else if (weather == WeatherType::BLIZZARD) {
-        topCol = (Color){ 14, 28, 45, 255 };
-        botCol = (Color){ 22, 38, 60, 255 };
-    } else if (weather == WeatherType::THUNDERSTORM) {
-        topCol = (Color){ 22, 16, 38, 255 };
-        botCol = (Color){ 30, 22, 50, 255 };
-    } else if (weather == WeatherType::RAIN) {
-        topCol = (Color){ 16, 26, 38, 255 };
-        botCol = (Color){ 22, 36, 52, 255 };
-    } else if (weather == WeatherType::ACID_RAIN) {
-        topCol = (Color){ 28, 16, 38, 255 };
-        botCol = (Color){ 38, 22, 52, 255 };
-    }
-
-    DrawRectangleGradientV(0, 0, w, h, topCol, botCol);
-
-    Color gridColor = (Color){ 255, 255, 255, 10 };
-    for (int y = 780; y < h; y += 50) {
-        DrawLine(0, y, w, y, gridColor);
-    }
+    WeatherRenderer::DrawWeatherBackground(weather);
 }
 
 void CombatRenderer::DrawWeatherForecast(const WeatherSystem& weatherSystem) {
-    int w = ScreenConfig::VIRTUAL_WIDTH;
-    Rectangle barRec = { GameConstants::TOP_BAR_X, GameConstants::TOP_BAR_Y, GameConstants::TOP_BAR_W, GameConstants::TOP_BAR_H };
-    DrawCard(barRec, (Color){ 20, 25, 38, 230 }, (Color){ 70, 80, 105, 255 }, 0.08f);
-
-    DrawText("WEATHER FORECAST", 65, 38, 20, (Color){ 160, 175, 200, 255 });
-    DrawText("[1-3 Turns Ahead Queue]", 65, 68, 15, (Color){ 120, 130, 150, 255 });
-
-    WeatherType current = weatherSystem.GetCurrentWeather();
-    Rectangle slot0Rec = { 380, 30, 480, 90 };
-    Color curColor = ToRaylibColor(WeatherSystem::GetWeatherColor(current));
-    DrawCard(slot0Rec, (Color){ 30, 38, 55, 255 }, curColor, 0.12f);
-
-    std::string activeTitle = "ACTIVE: " + std::string(WeatherSystem::GetWeatherIcon(current));
-    DrawText(activeTitle.c_str(), 400, 40, 26, curColor);
-    DrawText(WeatherSystem::GetWeatherShortDesc(current), 400, 75, 18, (Color){ 210, 220, 235, 255 });
-
-    const auto& queue = weatherSystem.GetForecastQueue();
-    float startX = 890.0f;
-    for (size_t i = 0; i < queue.size() && i < 3; ++i) {
-        WeatherType nextW = queue[i];
-        Rectangle nextRec = { startX + (float)i * 320.0f, 30.0f, 300.0f, 90.0f };
-        DrawCard(nextRec, (Color){ 25, 30, 42, 200 }, (Color){ 60, 70, 90, 200 }, 0.10f);
-
-        std::string turnLabel = "+" + std::to_string(i + 1) + " Turn: " + WeatherSystem::GetWeatherName(nextW);
-        DrawText(turnLabel.c_str(), (int)nextRec.x + 16, 42, 19, ToRaylibColor(WeatherSystem::GetWeatherColor(nextW)));
-        DrawText(WeatherSystem::GetWeatherShortDesc(nextW), (int)nextRec.x + 16, 74, 15, (Color){ 160, 170, 190, 255 });
-    }
-
-    Rectangle helpRec = { (float)w - 680.0f, 35.0f, 200.0f, 80.0f };
-    DrawButton(helpRec, "Guide [H]", (Color){ 41, 128, 185, 255 }, (Color){ 52, 152, 219, 255 });
-
-    Rectangle optRec = { (float)w - 460.0f, 35.0f, 210.0f, 80.0f };
-    DrawButton(optRec, "⚙️ Options [O]", (Color){ 39, 174, 96, 255 }, (Color){ 46, 204, 113, 255 });
-
-    Rectangle fsRec = { (float)w - 230.0f, 35.0f, 190.0f, 80.0f };
-    bool isFs = IsWindowFullscreen();
-    std::string fsText = isFs ? "Window" : "Full [F11]";
-    DrawButton(fsRec, fsText.c_str(), (Color){ 108, 92, 231, 255 }, (Color){ 155, 89, 182, 255 });
+    WeatherRenderer::DrawForecastPanel(weatherSystem);
 }
 
 void CombatRenderer::DrawPlayerPanel(const Player& player, StanceType selectedStance) {
@@ -155,6 +91,7 @@ void CombatRenderer::DrawPlayerPanel(const Player& player, StanceType selectedSt
 
     DrawCard(cardRec, (Color){ 24, 30, 45, 240 }, borderColor, 0.06f);
 
+    // Hero Avatar Badge
     DrawRectangle((int)cardRec.x + 30, (int)cardRec.y + 30, 90, 90, (Color){ 41, 128, 185, 220 });
     DrawRectangleLinesEx((Rectangle){ cardRec.x + 30, cardRec.y + 30, 90, 90 }, 2.5f, borderColor);
     DrawText("HERO", (int)cardRec.x + 46, (int)cardRec.y + 64, 20, WHITE);
@@ -172,9 +109,11 @@ void CombatRenderer::DrawPlayerPanel(const Player& player, StanceType selectedSt
     }
     DrawText(stanceName, (int)cardRec.x + 140, (int)cardRec.y + 78, 20, stanceCol);
 
+    // HP & Shield
     DrawText("HEALTH & SHIELD POINTS", (int)cardRec.x + 30, (int)cardRec.y + 145, 18, (Color){ 160, 175, 200, 255 });
     DrawHealthBar((Vector2){ cardRec.x + 30, cardRec.y + 175 }, (Vector2){ 560, 42 }, player.GetHp(), player.GetMaxHp(), player.GetShield(), (Color){ 46, 204, 113, 255 });
 
+    // Active Elemental Status Buffers
     DrawText("ACTIVE ELEMENTAL STATUS BUFFER:", (int)cardRec.x + 30, (int)cardRec.y + 245, 18, (Color){ 160, 175, 200, 255 });
     auto statusList = player.GetStatusInstances();
     if (statusList.empty()) {
@@ -183,6 +122,7 @@ void CombatRenderer::DrawPlayerPanel(const Player& player, StanceType selectedSt
         DrawStatusBadges(statusList, (Vector2){ cardRec.x + 30, cardRec.y + 280 });
     }
 
+    // Tactics & Controls Card
     Rectangle traitRec = { cardRec.x + 25, cardRec.y + 350, 570, 235 };
     DrawRectangleRounded(traitRec, 0.08f, 6, (Color){ 18, 22, 34, 220 });
     DrawText("COMBAT TACTICS & HOTKEYS:", (int)traitRec.x + 20, (int)traitRec.y + 18, 20, (Color){ 241, 196, 15, 255 });

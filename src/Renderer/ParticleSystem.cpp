@@ -96,7 +96,7 @@ void ParticleSystem::UpdateWeatherParticles(float dt, WeatherType currentWeather
     int screenWidth = ScreenConfig::VIRTUAL_WIDTH;
     int screenHeight = ScreenConfig::VIRTUAL_HEIGHT;
 
-    if (currentWeather == WeatherType::RAIN || currentWeather == WeatherType::THUNDERSTORM) {
+    if (currentWeather == WeatherType::RAIN || currentWeather == WeatherType::STORM) {
         for (int i = 0; i < 8; ++i) {
             Particle p;
             p.position = (Vector2){ RandomFloat(0.0f, (float)screenWidth), -20.0f };
@@ -109,7 +109,7 @@ void ParticleSystem::UpdateWeatherParticles(float dt, WeatherType currentWeather
             p.isSpark = false;
             weatherParticles.push_back(p);
         }
-        if (currentWeather == WeatherType::THUNDERSTORM && RandomFloat(0.0f, 100.0f) < 1.5f) {
+        if (currentWeather == WeatherType::STORM && RandomFloat(0.0f, 100.0f) < 1.5f) {
             TriggerScreenFlash(0.15f);
         }
     } else if (currentWeather == WeatherType::HEATWAVE) {
@@ -138,7 +138,7 @@ void ParticleSystem::UpdateWeatherParticles(float dt, WeatherType currentWeather
             p.isSpark = false;
             weatherParticles.push_back(p);
         }
-    } else if (currentWeather == WeatherType::GALE_WINDS) {
+    } else if (currentWeather == WeatherType::GALE) {
         if (RandomFloat(0.0f, 10.0f) < 4.0f) {
             Particle p;
             p.position = (Vector2){ -40.0f, RandomFloat(80.0f, (float)screenHeight - 150.0f) };

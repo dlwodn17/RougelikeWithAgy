@@ -78,11 +78,15 @@ enum class WeatherType {
     CLEAR = 0,      // Normal atmospheric baseline
     RAIN,           // Applies WET globally; amplifies Water damage
     HEATWAVE,       // Amplifies FIRE damage (+50%); applies Burning
-    THUNDERSTORM,   // Heavy rain (WET) + random lightning bolts (15 dmg)
+    GALE,           // Swirls and spreads debuffs to adjacent targets
+    STORM,          // Heavy rain (WET) + random lightning bolts (15 dmg)
     BLIZZARD,       // Applies COLD; flash-freezes WET targets; Cold dmg +30%
-    GALE_WINDS,     // Swirls and spreads debuffs to adjacent targets
     ACID_RAIN       // Drenches all units in combustible OIL
 };
+
+// Aliases for compatibility
+inline constexpr WeatherType THUNDERSTORM = WeatherType::STORM;
+inline constexpr WeatherType GALE_WINDS = WeatherType::GALE;
 
 enum class StanceType {
     ATTACK = 0,     // +40% Outgoing DMG
@@ -106,13 +110,11 @@ enum class IntentType {
 };
 
 enum class CombatPhase {
-    PLAYER_INPUT = 0,               // Waiting for player skill/stance choice
-    RESOLVE_PLAYER_ACTION,          // Step 1: Resolve player action & elemental reactions
-    RESOLVE_ENEMY_ACTIONS,          // Step 2: Resolve enemy AI action & reactions
-    TICK_STATUS_EFFECTS,            // Step 3: Tick status effects & DoT damage
-    TICK_COOLDOWNS,                 // Step 4: Tick player skill cooldowns (-1 Turn)
-    ADVANCE_WEATHER_AND_APPLY,      // Step 5: Advance 3-turn forecast queue & apply weather effect
-    RESET_TURN_AND_START_NEXT,      // Step 6: Reset turn states and start next round
+    PLAYER_INPUT = 0,               // Step 1: Waiting for player skill/stance choice
+    RESOLVE_PLAYER,                 // Step 2: Resolve player action & elemental reactions
+    APPLY_WEATHER,                  // Step 3: Apply environmental active weather effects
+    ENEMY_TURN,                     // Step 4: Resolve enemy AI action & player stance/parry
+    END_ROUND_TICK,                 // Step 5: DoT tick, Cooldown -1, Weather queue advance, start next turn
     VICTORY_SCREEN,                 // Wave cleared
     DEFEAT_SCREEN                   // Player defeated
 };
@@ -276,9 +278,9 @@ inline const char* GetWeatherTitleStr(WeatherType w) {
         case WeatherType::CLEAR:        return "Clear Sky";
         case WeatherType::RAIN:         return "Downpour Rain";
         case WeatherType::HEATWAVE:     return "Scorching Heatwave";
-        case WeatherType::THUNDERSTORM: return "Thunderstorm";
+        case WeatherType::GALE:         return "Howling Gale";
+        case WeatherType::STORM:        return "Thunderstorm";
         case WeatherType::BLIZZARD:     return "Glacial Blizzard";
-        case WeatherType::GALE_WINDS:   return "Howling Gale";
         case WeatherType::ACID_RAIN:    return "Corrosive Acid Rain";
         default:                        return "Calm";
     }

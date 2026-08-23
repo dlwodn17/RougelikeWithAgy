@@ -27,6 +27,7 @@ set(SOURCES
     src/Systems/WeatherSystem.cpp
     src/Systems/CombatSystem.cpp
     src/Renderer/ParticleSystem.cpp
+    src/Renderer/WeatherRenderer.cpp
     src/Renderer/CombatRenderer.cpp
     src/Renderer/UIRenderer.cpp
 )
