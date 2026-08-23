@@ -23,6 +23,7 @@ set(SOURCES
     src/WeatherSystem.cpp
     src/SkillSystem.cpp
     src/ParticleSystem.cpp
+    src/GameRenderer.cpp
     src/UIRenderer.cpp
     src/CombatSystem.cpp
     src/GameState.cpp

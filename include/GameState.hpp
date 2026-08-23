@@ -2,13 +2,16 @@
 
 #include "Common.hpp"
 #include "CombatSystem.hpp"
-#include "UIRenderer.hpp"
+#include "GameRenderer.hpp"
 
 class GameManager {
 private:
     AppState state;
     CombatSystem combatSystem;
-    UIRenderer uiRenderer;
+    GameRenderer renderer;
+    bool showSettings;
+    bool showGuide;
+    int selectedSettingIdx;
 
 public:
     GameManager();
@@ -19,4 +22,10 @@ public:
 
     AppState GetState() const { return state; }
     void SetState(AppState newState) { state = newState; }
+
+    bool IsSettingsVisible() const { return showSettings; }
+    void ToggleSettings() { showSettings = !showSettings; if (showSettings) showGuide = false; }
+
+    bool IsGuideVisible() const { return showGuide; }
+    void ToggleGuide() { showGuide = !showGuide; if (showGuide) showSettings = false; }
 };

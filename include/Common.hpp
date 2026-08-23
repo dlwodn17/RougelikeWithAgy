@@ -72,8 +72,11 @@ enum class AppState {
     BATTLE,
     VICTORY,
     GAME_OVER,
+    SETTINGS,
     TUTORIAL_MODAL
 };
+
+using GameScene = AppState;
 
 // ==========================================
 // Structs
@@ -198,6 +201,14 @@ public:
                 SetWindowPosition((monW - list[index].width) / 2, (monH - list[index].height) / 2);
             }
         }
+    }
+
+    static void CycleResolution(int delta) {
+        const auto& list = GetResolutions();
+        int count = static_cast<int>(list.size());
+        int newIdx = (currentResolutionIndex + delta) % count;
+        if (newIdx < 0) newIdx += count;
+        SetResolutionIndex(newIdx);
     }
 
     static void ToggleFullscreenMode() {
