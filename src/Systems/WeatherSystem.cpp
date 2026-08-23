@@ -112,14 +112,14 @@ const char* WeatherSystem::GetWeatherName(WeatherType weather) {
 
 const char* WeatherSystem::GetWeatherIcon(WeatherType weather) {
     switch (weather) {
-        case WeatherType::RAIN:         return "🌧️ Rain";
-        case WeatherType::HEATWAVE:     return "🔥 Heatwave";
-        case WeatherType::STORM:        return "⛈️ Storm";
-        case WeatherType::BLIZZARD:     return "🌨️ Blizzard";
-        case WeatherType::GALE:         return "🌪️ Gale";
-        case WeatherType::ACID_RAIN:    return "🧪 Acid Rain";
+        case WeatherType::RAIN:         return "[RAIN] Rain";
+        case WeatherType::HEATWAVE:     return "[HEAT] Heatwave";
+        case WeatherType::STORM:        return "[STORM] Storm";
+        case WeatherType::BLIZZARD:     return "[SNOW] Blizzard";
+        case WeatherType::GALE:         return "[GALE] Gale";
+        case WeatherType::ACID_RAIN:    return "[ACID] Acid Rain";
         case WeatherType::CLEAR:
-        default:                        return "☀️ Clear";
+        default:                        return "[SUN] Clear";
     }
 }
 

@@ -98,13 +98,13 @@ void CombatRenderer::DrawPlayerPanel(const Player& player, StanceType selectedSt
 
     DrawText(player.GetName().c_str(), (int)cardRec.x + 140, (int)cardRec.y + 35, 30, WHITE);
 
-    const char* stanceName = "⚔️ ATTACK STANCE (+40% DMG)";
+    const char* stanceName = "[ATK] ATTACK STANCE (+40% DMG)";
     Color stanceCol = (Color){ 231, 76, 60, 255 };
     if (selectedStance == StanceType::DEFENSE) {
-        stanceName = "🛡️ DEFENSE (+18 Shield, -30% DMG)";
+        stanceName = "[DEF] DEFENSE (+18 Shield, -30% DMG)";
         stanceCol = (Color){ 46, 204, 113, 255 };
     } else if (selectedStance == StanceType::PARRY) {
-        stanceName = "⚡ PARRY (Counter & Reflect)";
+        stanceName = "[PARRY] PARRY (Counter & Reflect)";
         stanceCol = (Color){ 241, 196, 15, 255 };
     }
     DrawText(stanceName, (int)cardRec.x + 140, (int)cardRec.y + 78, 20, stanceCol);
@@ -126,11 +126,11 @@ void CombatRenderer::DrawPlayerPanel(const Player& player, StanceType selectedSt
     Rectangle traitRec = { cardRec.x + 25, cardRec.y + 350, 570, 235 };
     DrawRectangleRounded(traitRec, 0.08f, 6, (Color){ 18, 22, 34, 220 });
     DrawText("COMBAT TACTICS & HOTKEYS:", (int)traitRec.x + 20, (int)traitRec.y + 18, 20, (Color){ 241, 196, 15, 255 });
-    DrawText("• Skills: [1] Torrent [2] Ignition [3] Thunder [4] Glacial", (int)traitRec.x + 20, (int)traitRec.y + 55, 17, (Color){ 190, 200, 220, 255 });
-    DrawText("• Stance: [Q] Attack (+40% DMG) [W] Defense [E] Parry", (int)traitRec.x + 20, (int)traitRec.y + 85, 17, (Color){ 190, 200, 220, 255 });
-    DrawText("• Execution: Press [SPACE] or [ENTER] to Execute Turn", (int)traitRec.x + 20, (int)traitRec.y + 115, 17, (Color){ 190, 200, 220, 255 });
-    DrawText("• Reactions: Combine WET + ELEC (Shock) / OIL + FIRE (Explosion)", (int)traitRec.x + 20, (int)traitRec.y + 145, 17, (Color){ 241, 196, 15, 255 });
-    DrawText("• Press [O] for Options / Resolution | [F11] Fullscreen", (int)traitRec.x + 20, (int)traitRec.y + 175, 17, (Color){ 108, 92, 231, 255 });
+    DrawText("- Skills: [1] Torrent [2] Ignition [3] Thunder [4] Glacial", (int)traitRec.x + 20, (int)traitRec.y + 55, 17, (Color){ 190, 200, 220, 255 });
+    DrawText("- Stance: [Q] Attack (+40% DMG) [W] Defense [E] Parry", (int)traitRec.x + 20, (int)traitRec.y + 85, 17, (Color){ 190, 200, 220, 255 });
+    DrawText("- Execution: Press [SPACE] or [ENTER] to Execute Turn", (int)traitRec.x + 20, (int)traitRec.y + 115, 17, (Color){ 190, 200, 220, 255 });
+    DrawText("- Reactions: Combine WET + ELEC (Shock) / OIL + FIRE (Explosion)", (int)traitRec.x + 20, (int)traitRec.y + 145, 17, (Color){ 241, 196, 15, 255 });
+    DrawText("- Press [O] for Options / Resolution | [F11] Fullscreen", (int)traitRec.x + 20, (int)traitRec.y + 175, 17, (Color){ 108, 92, 231, 255 });
 }
 
 void CombatRenderer::DrawEnemyPanel(const CombatSystem& combat) {
@@ -169,7 +169,7 @@ void CombatRenderer::DrawEnemyPanel(const CombatSystem& combat) {
         DrawCard(rec, bg, border, 0.06f);
 
         if (isSelected) {
-            DrawText("▼ ACTIVE TARGET ▼", (int)(rec.x + rec.width * 0.5f - 110), (int)rec.y - 30, 22, (Color){ 241, 196, 15, 255 });
+            DrawText("[v ACTIVE TARGET v]", (int)(rec.x + rec.width * 0.5f - 110), (int)rec.y - 30, 22, (Color){ 241, 196, 15, 255 });
         }
 
         DrawText(enemy.GetName().c_str(), (int)rec.x + 25, (int)rec.y + 25, 28, ToRaylibColor(enemy.GetColor()));
@@ -181,9 +181,9 @@ void CombatRenderer::DrawEnemyPanel(const CombatSystem& combat) {
 
         std::string intentText = "INTENT: " + intent.name;
         if (intent.type == IntentType::ATTACK) {
-            intentText += " (" + std::to_string(intent.value) + " ⚔️ DAMAGE)";
+            intentText += " (" + std::to_string(intent.value) + " DMG)";
         } else if (intent.type == IntentType::DEFEND) {
-            intentText += " (+" + std::to_string(intent.value) + " 🛡️ SHIELD)";
+            intentText += " (+" + std::to_string(intent.value) + " SHIELD)";
         }
         DrawText(intentText.c_str(), (int)intentRec.x + 16, (int)intentRec.y + 12, 20, intentBorder);
         DrawText(intent.desc.c_str(), (int)intentRec.x + 16, (int)intentRec.y + 42, 16, (Color){ 180, 190, 205, 255 });
@@ -202,7 +202,7 @@ void CombatRenderer::DrawEnemyPanel(const CombatSystem& combat) {
         if (enemy.IsFrozen()) {
             Rectangle freezeRec = { rec.x + 25, rec.y + 360, rec.width - 50, 55 };
             DrawRectangleRounded(freezeRec, 0.15f, 6, (Color){ 41, 128, 185, 220 });
-            DrawText("🧊 FROZEN (Next Action Skipped)", (int)freezeRec.x + 30, (int)freezeRec.y + 15, 22, WHITE);
+            DrawText("[FROZEN] (Next Action Skipped)", (int)freezeRec.x + 30, (int)freezeRec.y + 15, 22, WHITE);
         }
 
         if (!isSelected) {
@@ -229,9 +229,9 @@ void CombatRenderer::DrawStancePanel(const CombatSystem& combat) {
     bool defActive = (currentStance == StanceType::DEFENSE);
     bool parActive = (currentStance == StanceType::PARRY);
 
-    DrawButton(atkRec, "⚔️ ATK [Q]\n\n+40% DMG", (Color){ 192, 57, 43, 220 }, (Color){ 231, 76, 60, 255 }, atkActive, !isInputPhase);
-    DrawButton(defRec, "🛡️ DEF [W]\n\n+18 Shield\n-30% DMG", (Color){ 39, 174, 96, 220 }, (Color){ 46, 204, 113, 255 }, defActive, !isInputPhase);
-    DrawButton(parRec, "⚡ PAR [E]\n\nReflect\nCounter", (Color){ 211, 84, 0, 220 }, (Color){ 243, 156, 18, 255 }, parActive, !isInputPhase);
+    DrawButton(atkRec, "ATK [Q]\n\n+40% DMG", (Color){ 192, 57, 43, 220 }, (Color){ 231, 76, 60, 255 }, atkActive, !isInputPhase);
+    DrawButton(defRec, "DEF [W]\n\n+18 Shield\n-30% DMG", (Color){ 39, 174, 96, 220 }, (Color){ 46, 204, 113, 255 }, defActive, !isInputPhase);
+    DrawButton(parRec, "PARRY [E]\n\nReflect\nCounter", (Color){ 211, 84, 0, 220 }, (Color){ 243, 156, 18, 255 }, parActive, !isInputPhase);
 }
 
 void CombatRenderer::DrawSkillPanel(const CombatSystem& combat) {
@@ -282,7 +282,7 @@ void CombatRenderer::DrawExecuteButton(const CombatSystem& combat) {
     bool isInputPhase = (combat.GetPhase() == CombatPhase::PLAYER_INPUT);
     Rectangle rec = { GameConstants::EXECUTE_BTN_X, GameConstants::EXECUTE_BTN_Y,
                       GameConstants::EXECUTE_BTN_W, GameConstants::EXECUTE_BTN_H };
-    DrawButton(rec, "⚡ EXECUTE\n   TURN\n\n  [SPACE]", (Color){ 39, 174, 96, 220 }, (Color){ 46, 204, 113, 255 }, false, !isInputPhase);
+    DrawButton(rec, "EXECUTE\n TURN\n\n[SPACE]", (Color){ 39, 174, 96, 220 }, (Color){ 46, 204, 113, 255 }, false, !isInputPhase);
 }
 
 void CombatRenderer::DrawLogPanel(const std::vector<CombatLogEntry>& log) {

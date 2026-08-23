@@ -7,8 +7,8 @@ static float GetTimeInSeconds() {
 
 CombatSystem::CombatSystem() 
     : particleSystem(nullptr), currentPhase(CombatPhase::PLAYER_INPUT), phaseTimer(0.0f),
-      currentEnemyActionIndex(0), selectedSkillIndex(0), selectedTargetIndex(0),
-      selectedStance(StanceType::ATTACK), currentWave(1), maxWaves(3), turnCounter(1) {
+      selectedSkillIndex(0), selectedTargetIndex(0), selectedStance(StanceType::ATTACK),
+      currentWave(1), maxWaves(3), turnCounter(1) {
     InitializeNewRun();
 }
 
@@ -30,7 +30,7 @@ void CombatSystem::InitializeNewRun() {
     player.ResetCooldowns();
 
     AddCombatLog("=== RUN STARTED: Tower of Elemental Convergence ===", ColorRGBA{ 241, 196, 15, 255 });
-    AddCombatLog("Tip: Combine elements (e.g. WET + LIGHTNING = SHOCK) to exploit weaknesses!", ColorRGBA{ 189, 195, 199, 255 });
+    AddCombatLog("Tip: Combine elements (e.g. WET + ELEC = SHOCK) to trigger devastating combos!", ColorRGBA{ 189, 195, 199, 255 });
 
     StartWave(currentWave);
 }
@@ -95,7 +95,7 @@ void CombatSystem::AddCombatLog(const std::string& text, ColorRGBA color) {
     entry.timestamp = GetTimeInSeconds();
     combatLog.push_back(entry);
 
-    if (combatLog.size() > 50) {
+    if (combatLog.size() > 60) {
         combatLog.erase(combatLog.begin());
     }
 }
@@ -122,11 +122,20 @@ void CombatSystem::SelectStance(StanceType stance) {
     player.SetStance(stance);
 }
 
-// Stage 1: Player Input -> Transition to Step 2
+bool CombatSystem::CheckWaveCleared() {
+    for (const auto& enemy : enemies) {
+        if (enemy.IsAlive()) return false;
+    }
+    return true;
+}
+
 bool CombatSystem::ExecutePlayerTurn() {
     if (currentPhase != CombatPhase::PLAYER_INPUT) return false;
-    if (!player.CanUseSkill(selectedSkillIndex)) {
-        AddCombatLog("Cannot use skill: On Cooldown!", ColorRGBA{ 231, 76, 60, 255 });
+    
+    Skill* skill = player.GetSkill(selectedSkillIndex);
+    if (!skill || !skill->IsReady()) {
+        int cd = skill ? skill->GetCurrentCooldown() : 0;
+        AddCombatLog("Cannot use skill: On Cooldown (" + std::to_string(cd) + "T remaining)!", ColorRGBA{ 231, 76, 60, 255 });
         return false;
     }
 
@@ -143,34 +152,32 @@ bool CombatSystem::ExecutePlayerTurn() {
         if (!found) return false;
     }
 
-    // Apply Stance buffs to Player before action
-    player.SetStance(selectedStance);
-    if (selectedStance == StanceType::DEFENSE) {
-        player.AddShield(18);
-        if (particleSystem) particleSystem->AddFloatingText(player.GetPosition(), "+18 SHIELD", (Color){ 52, 152, 219, 255 });
-        AddCombatLog("Player enters Defense Stance (+18 Shield, -30% Dmg).", ColorRGBA{ 52, 152, 219, 255 });
-    } else if (selectedStance == StanceType::ATTACK) {
-        AddCombatLog("Player enters Attack Stance (+40% Outgoing Dmg).", ColorRGBA{ 231, 76, 60, 255 });
-    } else if (selectedStance == StanceType::PARRY) {
-        AddCombatLog("Player enters Parry Stance (Status Reflect & Counter).", ColorRGBA{ 241, 196, 15, 255 });
-    }
-
-    currentPhase = CombatPhase::RESOLVE_PLAYER;
-    phaseTimer = 0.5f;
+    ExecuteTurn();
     return true;
 }
 
-// Stage 2: Resolve Player Action & Elemental Reactions
-void CombatSystem::Step2_ResolvePlayerAction() {
-    Skill* skill = player.GetSkill(selectedSkillIndex);
+// 1. Resolve Player Action Subroutine
+void CombatSystem::ResolvePlayerAction(int skillIdx, int targetIdx, StanceType stance) {
+    Skill* skill = player.GetSkill(skillIdx);
     if (!skill) return;
 
-    player.UseSkill(selectedSkillIndex);
+    player.SetStance(stance);
+    if (stance == StanceType::DEFENSE) {
+        player.AddShield(18);
+        if (particleSystem) particleSystem->AddFloatingText(player.GetPosition(), "+18 SHIELD", (Color){ 52, 152, 219, 255 });
+        AddCombatLog("Player assumes Defense Stance (+18 Shield, -30% Dmg taken).", ColorRGBA{ 52, 152, 219, 255 });
+    } else if (stance == StanceType::ATTACK) {
+        AddCombatLog("Player assumes Attack Stance (+40% Outgoing Dmg).", ColorRGBA{ 231, 76, 60, 255 });
+    } else if (stance == StanceType::PARRY) {
+        AddCombatLog("Player assumes Parry Stance (Counter-attack & Status Reflect).", ColorRGBA{ 241, 196, 15, 255 });
+    }
 
-    Enemy& target = enemies[selectedTargetIndex];
+    player.UseSkill(skillIdx);
+
+    Enemy& target = enemies[targetIdx];
     int rawDmg = skill->GetEffectiveDamage();
 
-    if (selectedStance == StanceType::ATTACK) {
+    if (stance == StanceType::ATTACK) {
         rawDmg = static_cast<int>(rawDmg * 1.40f);
     }
 
@@ -201,7 +208,6 @@ void CombatSystem::Step2_ResolvePlayerAction() {
 
     AddCombatLog("Player cast [" + skill->GetName() + "] on " + target.GetName() + " for " + std::to_string(report.mitigatedDamage) + " dmg.", skill->GetThemeColor());
 
-    // Multi-line detailed elemental reaction feedback
     if (report.reaction.triggered) {
         Color reactionColor = (Color){ 241, 196, 15, 255 };
         if (report.reaction.type == ReactionType::EXPLOSION) reactionColor = (Color){ 231, 76, 60, 255 };
@@ -213,38 +219,36 @@ void CombatSystem::Step2_ResolvePlayerAction() {
             particleSystem->SpawnReactionBurst(target.GetPosition(), report.reaction.name, reactionColor);
             particleSystem->AddFloatingText(
                 (Vector2){ target.GetX(), target.GetY() - 35.0f },
-                "★ REACTION: " + report.reaction.name + "!",
+                "* REACTION: " + report.reaction.name + " *",
                 reactionColor,
                 24.0f,
                 1.6f
             );
         }
 
-        // Line 1: Reaction Header & Description
-        AddCombatLog("★ [REACTION TRIGGERED: " + report.reaction.name + "] " + report.reaction.description, ColorRGBA{ reactionColor.r, reactionColor.g, reactionColor.b, reactionColor.a });
+        AddCombatLog("* [REACTION TRIGGERED: " + report.reaction.name + "] " + report.reaction.description, ColorRGBA{ reactionColor.r, reactionColor.g, reactionColor.b, reactionColor.a });
         
-        // Line 2: Specific damage breakdown
-        std::string bonusDetails = "-> Bonus Damage: +" + std::to_string(report.reaction.bonusDamage);
+        std::string bonusDetails = "-> Bonus Reaction Damage: +" + std::to_string(report.reaction.bonusDamage);
         if (report.reaction.chainAoE) {
-            bonusDetails += " | Shockwave arcs 12 DMG to neighboring targets!";
+            bonusDetails += " | Shockwave arcs 12 DMG across all enemies!";
         }
         if (report.reaction.appliedElements != Element::NONE) {
             bonusDetails += " | Inflicted [" + std::string(ElementalSystem::GetElementName(report.reaction.appliedElements)) + "] (" + std::to_string(report.reaction.appliedDuration) + "T)";
         }
         if (report.reaction.stunTarget) {
-            bonusDetails += " | Target is frozen solid and skips next action!";
+            bonusDetails += " | Target frozen solid (skips next action)!";
         }
-        AddCombatLog(bonusDetails, ColorRGBA{ reactionColor.r, reactionColor.g, reactionColor.b, 230 });
+        AddCombatLog(bonusDetails, ColorRGBA{ reactionColor.r, reactionColor.g, reactionColor.b, 220 });
 
         if (report.reaction.chainAoE) {
             for (size_t i = 0; i < enemies.size(); ++i) {
-                if (static_cast<int>(i) != selectedTargetIndex && enemies[i].IsAlive()) {
+                if (static_cast<int>(i) != targetIdx && enemies[i].IsAlive()) {
                     DamageReport chainReport = enemies[i].ApplyIncomingDamage(report.reaction.aoeDamage, Element::LIGHTNING);
                     if (particleSystem) {
                         particleSystem->SpawnHitSparks(enemies[i].GetPosition(), Element::LIGHTNING, 10);
                         particleSystem->AddFloatingText(enemies[i].GetPosition(), "-" + std::to_string(chainReport.mitigatedDamage) + " ARC", (Color){ 241, 196, 15, 255 });
                     }
-                    AddCombatLog("   ↳ Arc struck " + enemies[i].GetName() + " for " + std::to_string(chainReport.mitigatedDamage) + " dmg!", ColorRGBA{ 241, 196, 15, 255 });
+                    AddCombatLog("   -> Arc struck " + enemies[i].GetName() + " for " + std::to_string(chainReport.mitigatedDamage) + " dmg!", ColorRGBA{ 241, 196, 15, 255 });
                 }
             }
         }
@@ -256,11 +260,67 @@ void CombatSystem::Step2_ResolvePlayerAction() {
     }
 }
 
-// Stage 3: Apply Environmental Weather Effects Globally
-void CombatSystem::Step3_ApplyWeatherEffects() {
+// 2. Resolve Enemy AI Action Subroutine
+void CombatSystem::ResolveEnemyAction(Enemy& enemy, Player& targetPlayer) {
+    const Intent& intent = enemy.GetIntent();
+
+    if (intent.type == IntentType::ATTACK) {
+        DamageReport pReport = targetPlayer.ApplyIncomingDamage(intent.value, intent.element, targetPlayer.GetStance());
+
+        if (particleSystem) {
+            particleSystem->SpawnSlashEffect(enemy.GetPosition(), targetPlayer.GetPosition(), ToRaylibColor(enemy.GetColor()));
+            particleSystem->SpawnHitSparks(targetPlayer.GetPosition(), intent.element, 10);
+        }
+
+        if (pReport.wasParried) {
+            int counterDmg = 12;
+            DamageReport counterReport = enemy.ApplyIncomingDamage(counterDmg, intent.element);
+            if (intent.element != Element::NONE) {
+                enemy.ApplyElement(intent.element, 2);
+            }
+            if (particleSystem) {
+                particleSystem->AddFloatingText(targetPlayer.GetPosition(), "PARRIED! -50%", (Color){ 241, 196, 15, 255 });
+                particleSystem->AddFloatingText(enemy.GetPosition(), "-" + std::to_string(counterReport.mitigatedDamage) + " COUNTER", (Color){ 241, 196, 15, 255 });
+            }
+            AddCombatLog("[PARRY] Player deflected " + enemy.GetName() + "'s attack and countered for " + std::to_string(counterReport.mitigatedDamage) + " dmg!", ColorRGBA{ 241, 196, 15, 255 });
+        } else if (pReport.shieldAbsorbed > 0) {
+            if (particleSystem) {
+                particleSystem->AddFloatingText(targetPlayer.GetPosition(), "SHIELDED (" + std::to_string(pReport.shieldAbsorbed) + ")", (Color){ 52, 152, 219, 255 });
+                if (pReport.healthDamage > 0) {
+                    particleSystem->AddFloatingText(targetPlayer.GetPosition(), "-" + std::to_string(pReport.healthDamage), (Color){ 231, 76, 60, 255 });
+                }
+            }
+            AddCombatLog(enemy.GetName() + " attacks for " + std::to_string(pReport.mitigatedDamage) + " dmg (Shield absorbed " + std::to_string(pReport.shieldAbsorbed) + ").", ColorRGBA{ 231, 76, 60, 255 });
+        } else {
+            if (particleSystem) particleSystem->AddFloatingText(targetPlayer.GetPosition(), "-" + std::to_string(pReport.healthDamage), (Color){ 231, 76, 60, 255 });
+            AddCombatLog(enemy.GetName() + " strikes Player for " + std::to_string(pReport.healthDamage) + " dmg.", ColorRGBA{ 231, 76, 60, 255 });
+        }
+    } else if (intent.type == IntentType::DEFEND) {
+        enemy.AddShield(intent.value);
+        if (particleSystem) particleSystem->AddFloatingText(enemy.GetPosition(), "+" + std::to_string(intent.value) + " SHIELD", (Color){ 52, 152, 219, 255 });
+        AddCombatLog(enemy.GetName() + " casts [" + intent.name + "] gaining " + std::to_string(intent.value) + " Shield.", ColorRGBA{ 52, 152, 219, 255 });
+    } else if (intent.type == IntentType::DEBUFF) {
+        if (targetPlayer.GetStance() == StanceType::PARRY) {
+            enemy.ApplyElement(intent.element, 2);
+            if (particleSystem) particleSystem->AddFloatingText(targetPlayer.GetPosition(), "PARRIED DEBUFF!", (Color){ 241, 196, 15, 255 });
+            AddCombatLog("[PARRY] Player reflected [" + intent.name + "] back to " + enemy.GetName() + "!", ColorRGBA{ 241, 196, 15, 255 });
+        } else {
+            targetPlayer.ApplyElement(intent.element, 2);
+            if (particleSystem) particleSystem->AddFloatingText(targetPlayer.GetPosition(), "+" + std::string(ElementalSystem::GetElementName(intent.element)), ToRaylibColor(ElementalSystem::GetElementColor(intent.element)));
+            AddCombatLog(enemy.GetName() + " casts [" + intent.name + "] inflicting [" + ElementalSystem::GetElementName(intent.element) + "] on Player.", ElementalSystem::GetElementColor(intent.element));
+        }
+    } else if (intent.type == IntentType::BUFF) {
+        enemy.Heal(intent.value);
+        if (particleSystem) particleSystem->AddFloatingText(enemy.GetPosition(), "+" + std::to_string(intent.value) + " HP", (Color){ 46, 204, 113, 255 });
+        AddCombatLog(enemy.GetName() + " channels [" + intent.name + "].", ColorRGBA{ 46, 204, 113, 255 });
+    }
+}
+
+// 3. Apply Active Weather Environmental Effect Subroutine
+void CombatSystem::ApplyActiveWeatherEffect() {
     WeatherTriggerResult weatherRes = weatherSystem.ProcessTurnStartWeather();
 
-    AddCombatLog("[WEATHER EFFECT: " + weatherRes.title + "] " + weatherRes.description, weatherRes.weatherColor);
+    AddCombatLog("[WEATHER ACTIVATION: " + weatherRes.title + "] " + weatherRes.description, weatherRes.weatherColor);
 
     if (weatherRes.globalStatusToApply != Element::NONE) {
         player.ApplyElement(weatherRes.globalStatusToApply, weatherRes.statusDuration);
@@ -271,7 +331,7 @@ void CombatSystem::Step3_ApplyWeatherEffects() {
                 if (weatherSystem.GetCurrentWeather() == WeatherType::BLIZZARD && enemy.HasElement(Element::WET)) {
                     enemy.ClearElement(Element::WET);
                     enemy.SetFrozen(true);
-                    if (particleSystem) particleSystem->AddFloatingText(enemy.GetPosition(), "FROZEN!", (Color){ 162, 222, 255, 255 }, 24.0f);
+                    if (particleSystem) particleSystem->AddFloatingText(enemy.GetPosition(), "[FROZEN]!", (Color){ 162, 222, 255, 255 }, 24.0f);
                     AddCombatLog(enemy.GetName() + " is drenched and freezes solid in the blizzard!", ColorRGBA{ 162, 222, 255, 255 });
                 } else {
                     enemy.ApplyElement(weatherRes.globalStatusToApply, weatherRes.statusDuration);
@@ -294,7 +354,7 @@ void CombatSystem::Step3_ApplyWeatherEffects() {
                 particleSystem->SpawnHitSparks(enemies[targetIdx].GetPosition(), Element::LIGHTNING, 20);
                 particleSystem->AddFloatingText(enemies[targetIdx].GetPosition(), "-" + std::to_string(strike.mitigatedDamage) + " LIGHTNING", (Color){ 241, 196, 15, 255 });
             }
-            AddCombatLog("⚡ Lightning bolt strikes " + enemies[targetIdx].GetName() + " for " + std::to_string(strike.mitigatedDamage) + " dmg!", ColorRGBA{ 241, 196, 15, 255 });
+            AddCombatLog("Lightning bolt strikes " + enemies[targetIdx].GetName() + " for " + std::to_string(strike.mitigatedDamage) + " dmg!", ColorRGBA{ 241, 196, 15, 255 });
         }
     }
 
@@ -312,93 +372,48 @@ void CombatSystem::Step3_ApplyWeatherEffects() {
             }
         }
         if (!collectedElements.empty()) {
-            AddCombatLog("🌪️ Gale winds swirl statuses across all combatants!", ColorRGBA{ 46, 204, 113, 255 });
+            AddCombatLog("Gale winds swirl active statuses across all combatants!", ColorRGBA{ 46, 204, 113, 255 });
         }
     }
 }
 
-// Stage 4: Resolve Enemy AI Actions & Player Stance/Parry
-void CombatSystem::Step4_ResolveEnemyActionStep() {
-    if (currentEnemyActionIndex >= static_cast<int>(enemies.size())) {
-        currentPhase = CombatPhase::END_ROUND_TICK;
-        phaseTimer = 0.4f;
+// Complete Sequential Turn Execution Pipeline
+void CombatSystem::ExecuteTurn() {
+    AddCombatLog("=== ROUND " + std::to_string(turnCounter) + " RESOLUTION ===", ColorRGBA{ 241, 196, 15, 255 });
+
+    // 1. Resolve Player Action
+    ResolvePlayerAction(selectedSkillIndex, selectedTargetIndex, selectedStance);
+
+    // 2. Check if all enemies are dead (Wave clear / Victory check)
+    if (CheckWaveCleared()) {
+        currentPhase = CombatPhase::VICTORY_SCREEN;
+        AddCombatLog("=== VICTORY: Wave Cleared! ===", ColorRGBA{ 46, 204, 113, 255 });
         return;
     }
 
-    Enemy& enemy = enemies[currentEnemyActionIndex];
-    if (!enemy.IsAlive()) {
-        currentEnemyActionIndex++;
-        return;
-    }
+    // 3. Resolve Enemy AI Actions
+    for (auto& enemy : enemies) {
+        if (!enemy.IsAlive()) continue;
 
-    if (enemy.IsFrozen()) {
-        enemy.SetFrozen(false);
-        if (particleSystem) particleSystem->AddFloatingText(enemy.GetPosition(), "THAWED (Turn Skipped)", (Color){ 162, 222, 255, 255 });
-        AddCombatLog(enemy.GetName() + " is frozen and skips their action!", ColorRGBA{ 162, 222, 255, 255 });
-        currentEnemyActionIndex++;
-        return;
-    }
-
-    const Intent& intent = enemy.GetIntent();
-
-    if (intent.type == IntentType::ATTACK) {
-        DamageReport pReport = player.ApplyIncomingDamage(intent.value, intent.element, player.GetStance());
-
-        if (particleSystem) {
-            particleSystem->SpawnSlashEffect(enemy.GetPosition(), player.GetPosition(), ToRaylibColor(enemy.GetColor()));
-            particleSystem->SpawnHitSparks(player.GetPosition(), intent.element, 10);
-        }
-
-        if (pReport.wasParried) {
-            int counterDmg = 12;
-            DamageReport counterReport = enemy.ApplyIncomingDamage(counterDmg, intent.element);
-            if (intent.element != Element::NONE) {
-                enemy.ApplyElement(intent.element, 2);
-            }
-            if (particleSystem) {
-                particleSystem->AddFloatingText(player.GetPosition(), "PARRIED! -50%", (Color){ 241, 196, 15, 255 });
-                particleSystem->AddFloatingText(enemy.GetPosition(), "-" + std::to_string(counterReport.mitigatedDamage) + " COUNTER", (Color){ 241, 196, 15, 255 });
-            }
-            AddCombatLog("⚔️ PARRY! Player deflected " + enemy.GetName() + "'s attack and countered for " + std::to_string(counterReport.mitigatedDamage) + " dmg!", ColorRGBA{ 241, 196, 15, 255 });
-        } else if (pReport.shieldAbsorbed > 0) {
-            if (particleSystem) {
-                particleSystem->AddFloatingText(player.GetPosition(), "SHIELDED (" + std::to_string(pReport.shieldAbsorbed) + ")", (Color){ 52, 152, 219, 255 });
-                if (pReport.healthDamage > 0) {
-                    particleSystem->AddFloatingText(player.GetPosition(), "-" + std::to_string(pReport.healthDamage), (Color){ 231, 76, 60, 255 });
-                }
-            }
-            AddCombatLog(enemy.GetName() + " attacks for " + std::to_string(pReport.mitigatedDamage) + " dmg (Shield absorbed " + std::to_string(pReport.shieldAbsorbed) + ").", ColorRGBA{ 231, 76, 60, 255 });
+        if (enemy.IsFrozen()) {
+            enemy.SetFrozen(false);
+            if (particleSystem) particleSystem->AddFloatingText(enemy.GetPosition(), "THAWED (Turn Skipped)", (Color){ 162, 222, 255, 255 });
+            AddCombatLog(enemy.GetName() + " is [FROZEN] and skips their action!", ColorRGBA{ 162, 222, 255, 255 });
         } else {
-            if (particleSystem) particleSystem->AddFloatingText(player.GetPosition(), "-" + std::to_string(pReport.healthDamage), (Color){ 231, 76, 60, 255 });
-            AddCombatLog(enemy.GetName() + " hits Player for " + std::to_string(pReport.healthDamage) + " dmg.", ColorRGBA{ 231, 76, 60, 255 });
+            ResolveEnemyAction(enemy, player);
         }
-    } else if (intent.type == IntentType::DEFEND) {
-        enemy.AddShield(intent.value);
-        if (particleSystem) particleSystem->AddFloatingText(enemy.GetPosition(), "+" + std::to_string(intent.value) + " SHIELD", (Color){ 52, 152, 219, 255 });
-        AddCombatLog(enemy.GetName() + " casts [" + intent.name + "] gaining " + std::to_string(intent.value) + " Shield.", ColorRGBA{ 52, 152, 219, 255 });
-    } else if (intent.type == IntentType::DEBUFF) {
-        if (player.GetStance() == StanceType::PARRY) {
-            enemy.ApplyElement(intent.element, 2);
-            if (particleSystem) particleSystem->AddFloatingText(player.GetPosition(), "PARRIED DEBUFF!", (Color){ 241, 196, 15, 255 });
-            AddCombatLog("⚔️ PARRY! Player reflected [" + intent.name + "] back to " + enemy.GetName() + "!", ColorRGBA{ 241, 196, 15, 255 });
-        } else {
-            player.ApplyElement(intent.element, 2);
-            if (particleSystem) particleSystem->AddFloatingText(player.GetPosition(), "+" + std::string(ElementalSystem::GetElementName(intent.element)), ToRaylibColor(ElementalSystem::GetElementColor(intent.element)));
-            AddCombatLog(enemy.GetName() + " casts [" + intent.name + "] inflicting [" + ElementalSystem::GetElementName(intent.element) + "] on Player.", ElementalSystem::GetElementColor(intent.element));
-        }
-    } else if (intent.type == IntentType::BUFF) {
-        enemy.Heal(intent.value);
-        if (particleSystem) particleSystem->AddFloatingText(enemy.GetPosition(), "+" + std::to_string(intent.value) + " HP", (Color){ 46, 204, 113, 255 });
-        AddCombatLog(enemy.GetName() + " channels [" + intent.name + "].", ColorRGBA{ 46, 204, 113, 255 });
+        // Roll next turn's intent for the enemy
+        enemy.AdvancePattern();
     }
 
-    enemy.AdvancePattern();
-    currentEnemyActionIndex++;
-}
+    // 4. Check if player died from enemy attacks
+    if (!player.IsAlive()) {
+        currentPhase = CombatPhase::DEFEAT_SCREEN;
+        AddCombatLog("=== DEFEAT: You have fallen in combat ===", ColorRGBA{ 231, 76, 60, 255 });
+        return;
+    }
 
-// Stage 5: End Round Tick (DoT, Cooldowns, Weather Queue Advance, Reset)
-void CombatSystem::Step5_EndRoundTick() {
-    // 1. Tick Status Effects / DoT
+    // 5. Tick Status Effects (Buffs, Debuffs, DoTs) on Player and all Enemies
     std::vector<std::string> tickLogs;
     player.TickStatusEffects(tickLogs);
     for (auto& enemy : enemies) {
@@ -410,29 +425,39 @@ void CombatSystem::Step5_EndRoundTick() {
         AddCombatLog(log, ColorRGBA{ 230, 126, 34, 255 });
     }
 
-    // 2. Reset Stance Shields
+    // Check if wave cleared or player died from DoTs
+    if (CheckWaveCleared()) {
+        currentPhase = CombatPhase::VICTORY_SCREEN;
+        AddCombatLog("=== VICTORY: Wave Cleared! ===", ColorRGBA{ 46, 204, 113, 255 });
+        return;
+    }
+    if (!player.IsAlive()) {
+        currentPhase = CombatPhase::DEFEAT_SCREEN;
+        AddCombatLog("=== DEFEAT: You have fallen in combat ===", ColorRGBA{ 231, 76, 60, 255 });
+        return;
+    }
+
+    // 6. Decrement Skill Cooldowns
+    player.TickCooldowns(); // for each skill: if (cooldown > 0) cooldown--;
+    AddCombatLog("Player skill cooldowns updated (-1 Turn).", ColorRGBA{ 160, 175, 200, 255 });
+
+    // 7. Advance Weather Forecast Queue & Apply
+    // Pop current active weather, shift queue left, push a new random upcoming weather
+    weatherSystem.AdvanceTurn();
+    ApplyActiveWeatherEffect();
+
+    // 8. Reset Turn State
+    turnCounter++;
     player.ResetShield();
     for (auto& enemy : enemies) {
         enemy.ResetShield();
-    }
-
-    // 3. Tick Cooldowns
-    player.TickCooldowns();
-
-    // 4. Advance Weather Forecast Queue
-    weatherSystem.AdvanceTurn();
-    AddCombatLog("Round ended. Weather queue advanced 1 turn.", ColorRGBA{ 160, 175, 200, 255 });
-
-    // 5. Increment turn counter and update enemy intents
-    turnCounter++;
-    for (auto& enemy : enemies) {
         if (enemy.IsAlive()) {
             enemy.DecideIntent(turnCounter, player, weatherSystem.GetCurrentWeather());
         }
     }
 
-    // 6. Retarget if current target is dead
-    if (selectedTargetIndex >= 0 && selectedTargetIndex < static_cast<int>(enemies.size()) && !enemies[selectedTargetIndex].IsAlive()) {
+    // Retarget if current target is dead
+    if (selectedTargetIndex < 0 || selectedTargetIndex >= static_cast<int>(enemies.size()) || !enemies[selectedTargetIndex].IsAlive()) {
         for (size_t i = 0; i < enemies.size(); ++i) {
             if (enemies[i].IsAlive()) {
                 selectedTargetIndex = (int)i;
@@ -441,28 +466,17 @@ void CombatSystem::Step5_EndRoundTick() {
         }
     }
 
-    // 7. Check Battle End Conditions
     CheckBattleEndConditions();
 }
 
 void CombatSystem::CheckBattleEndConditions() {
     if (!player.IsAlive()) {
         currentPhase = CombatPhase::DEFEAT_SCREEN;
-        AddCombatLog("=== DEFEAT: You have fallen in combat ===", ColorRGBA{ 231, 76, 60, 255 });
         return;
     }
 
-    bool allEnemiesDead = true;
-    for (const auto& enemy : enemies) {
-        if (enemy.IsAlive()) {
-            allEnemiesDead = false;
-            break;
-        }
-    }
-
-    if (allEnemiesDead) {
+    if (CheckWaveCleared()) {
         currentPhase = CombatPhase::VICTORY_SCREEN;
-        AddCombatLog("=== VICTORY: Wave Cleared! ===", ColorRGBA{ 46, 204, 113, 255 });
     } else {
         currentPhase = CombatPhase::PLAYER_INPUT;
     }
@@ -487,49 +501,5 @@ void CombatSystem::Update(float dt) {
     player.UpdateVisuals(dt);
     for (auto& enemy : enemies) {
         enemy.UpdateVisuals(dt);
-    }
-
-    if (phaseTimer > 0.0f) {
-        phaseTimer -= dt;
-        return;
-    }
-
-    switch (currentPhase) {
-        case CombatPhase::RESOLVE_PLAYER:
-            Step2_ResolvePlayerAction();
-            CheckBattleEndConditions();
-            if (currentPhase != CombatPhase::VICTORY_SCREEN && currentPhase != CombatPhase::DEFEAT_SCREEN) {
-                currentPhase = CombatPhase::APPLY_WEATHER;
-                phaseTimer = 0.45f;
-            }
-            break;
-
-        case CombatPhase::APPLY_WEATHER:
-            Step3_ApplyWeatherEffects();
-            CheckBattleEndConditions();
-            if (currentPhase != CombatPhase::VICTORY_SCREEN && currentPhase != CombatPhase::DEFEAT_SCREEN) {
-                currentPhase = CombatPhase::ENEMY_TURN;
-                currentEnemyActionIndex = 0;
-                phaseTimer = 0.45f;
-            }
-            break;
-
-        case CombatPhase::ENEMY_TURN:
-            Step4_ResolveEnemyActionStep();
-            CheckBattleEndConditions();
-            if (currentPhase == CombatPhase::ENEMY_TURN) {
-                phaseTimer = 0.45f;
-            }
-            break;
-
-        case CombatPhase::END_ROUND_TICK:
-            Step5_EndRoundTick();
-            break;
-
-        case CombatPhase::PLAYER_INPUT:
-        case CombatPhase::VICTORY_SCREEN:
-        case CombatPhase::DEFEAT_SCREEN:
-        default:
-            break;
     }
 }

@@ -249,14 +249,14 @@ inline const char* GetElementNameStr(Element elem) {
 
 inline const char* GetElementSymbolStr(Element elem) {
     switch (elem) {
-        case Element::WET:       return "💧 WET";
-        case Element::FIRE:      return "🔥 FIRE";
-        case Element::OIL:       return "🛢️ OIL";
-        case Element::LIGHTNING: return "⚡ LIGHTNING";
-        case Element::COLD:      return "❄️ COLD";
-        case Element::GALE:      return "🌪️ GALE";
+        case Element::WET:       return "[WET]";
+        case Element::FIRE:      return "[FIRE]";
+        case Element::OIL:       return "[OIL]";
+        case Element::LIGHTNING: return "[ELEC]";
+        case Element::COLD:      return "[COLD]";
+        case Element::GALE:      return "[GALE]";
         case Element::NONE:
-        default:                 return "⚪ NONE";
+        default:                 return "[NONE]";
     }
 }
 

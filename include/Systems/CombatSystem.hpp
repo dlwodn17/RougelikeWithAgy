@@ -16,7 +16,6 @@ private:
 
     CombatPhase currentPhase;
     float phaseTimer;
-    int currentEnemyActionIndex;
 
     int selectedSkillIndex;
     int selectedTargetIndex;
@@ -42,12 +41,13 @@ public:
     void SelectTarget(int index);
     void SelectStance(StanceType stance);
     bool ExecutePlayerTurn();
+    void ExecuteTurn();
 
-    // 5-Stage Turn Lifecycle State Machine
-    void Step2_ResolvePlayerAction();
-    void Step3_ApplyWeatherEffects();
-    void Step4_ResolveEnemyActionStep();
-    void Step5_EndRoundTick();
+    // Pipeline Sub-routines
+    void ResolvePlayerAction(int skillIdx, int targetIdx, StanceType stance);
+    void ResolveEnemyAction(Enemy& enemy, Player& targetPlayer);
+    void ApplyActiveWeatherEffect();
+    bool CheckWaveCleared();
 
     // Progression
     void NextWave();

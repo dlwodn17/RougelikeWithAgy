@@ -63,22 +63,22 @@ void UIRenderer::DrawTitleScreen() const {
     DrawRectangleRoundedLinesEx(reactionBox, 0.08f, 6, 2.0f, (Color){ 65, 75, 95, 255 });
 
     DrawText("DISCOVER POWERFUL ELEMENTAL COMBOS:", (int)reactionBox.x + 25, (int)reactionBox.y + 20, 22, (Color){ 241, 196, 15, 255 });
-    DrawText("• 💧 WET + ⚡ LIGHTNING = [SHOCK]    -> Electric chain damage across all enemies", (int)reactionBox.x + 30, (int)reactionBox.y + 65, 20, (Color){ 52, 152, 219, 255 });
-    DrawText("• 🛢️ OIL + 🔥 FIRE = [EXPLOSION]     -> Cataclysmic blast + continuous Burning DoT", (int)reactionBox.x + 30, (int)reactionBox.y + 110, 20, (Color){ 231, 76, 60, 255 });
-    DrawText("• 💧 WET + ❄️ COLD = [FROZEN]        -> Solid ice encasement skips enemy actions", (int)reactionBox.x + 30, (int)reactionBox.y + 155, 20, (Color){ 162, 222, 255, 255 });
-    DrawText("• 🌪️ GALE WINDS (Weather)           -> Spreads active status debuffs to all units", (int)reactionBox.x + 30, (int)reactionBox.y + 200, 20, (Color){ 46, 204, 113, 255 });
-    DrawText("• 🌦️ 3-Turn Forecast Ribbon        -> Plan ahead to amplify elemental synergies", (int)reactionBox.x + 30, (int)reactionBox.y + 240, 18, (Color){ 241, 196, 15, 255 });
+    DrawText("- [WET] + [ELEC] = [SHOCK]      -> Electric chain damage across all enemies", (int)reactionBox.x + 30, (int)reactionBox.y + 65, 20, (Color){ 52, 152, 219, 255 });
+    DrawText("- [OIL] + [FIRE] = [EXPLOSION]  -> Cataclysmic blast + continuous Burning DoT", (int)reactionBox.x + 30, (int)reactionBox.y + 110, 20, (Color){ 231, 76, 60, 255 });
+    DrawText("- [WET] + [COLD] = [FROZEN]     -> Solid ice encasement skips enemy actions", (int)reactionBox.x + 30, (int)reactionBox.y + 155, 20, (Color){ 162, 222, 255, 255 });
+    DrawText("- [GALE] WINDS (Weather)        -> Spreads active status debuffs to all units", (int)reactionBox.x + 30, (int)reactionBox.y + 200, 20, (Color){ 46, 204, 113, 255 });
+    DrawText("- 3-Turn Forecast Ribbon        -> Plan ahead to amplify elemental synergies", (int)reactionBox.x + 30, (int)reactionBox.y + 240, 18, (Color){ 241, 196, 15, 255 });
 
     // Start Buttons
     Rectangle startRec = { frame.x + frame.width * 0.5f - 260.0f, frame.y + 540.0f, 520.0f, 85.0f };
-    CombatRenderer::DrawButton(startRec, "⚔️ START EXPEDITION [ENTER / SPACE]", (Color){ 39, 174, 96, 255 }, (Color){ 46, 204, 113, 255 }, false, false, 24);
+    CombatRenderer::DrawButton(startRec, "START EXPEDITION [ENTER / SPACE]", (Color){ 39, 174, 96, 255 }, (Color){ 46, 204, 113, 255 }, false, false, 24);
 
     Rectangle optRec = { frame.x + frame.width * 0.5f - 260.0f, frame.y + 640.0f, 520.0f, 75.0f };
-    CombatRenderer::DrawButton(optRec, "⚙️ Video & Display Options [O]", (Color){ 41, 128, 185, 255 }, (Color){ 52, 152, 219, 255 }, false, false, 22);
+    CombatRenderer::DrawButton(optRec, "Video & Display Options [O]", (Color){ 41, 128, 185, 255 }, (Color){ 52, 152, 219, 255 }, false, false, 22);
 
     Rectangle fsRec = { frame.x + frame.width * 0.5f - 260.0f, frame.y + 730.0f, 520.0f, 75.0f };
     bool isFs = IsWindowFullscreen();
-    std::string fsText = isFs ? "🗖 Windowed Mode" : "⛶ Fullscreen Mode [F11]";
+    std::string fsText = isFs ? "Windowed Mode" : "Fullscreen Mode [F11]";
     CombatRenderer::DrawButton(fsRec, fsText.c_str(), (Color){ 108, 92, 231, 255 }, (Color){ 155, 89, 182, 255 }, false, false, 22);
 
     DrawText("Native QHD (2560x1440) Vector Engine | Raylib 5.5 C++17 Modular Roguelike", (int)(frame.x + 300), (int)frame.y + 830, 20, (Color){ 140, 150, 170, 255 });
@@ -90,7 +90,7 @@ void UIRenderer::DrawVictoryOverlay(const CombatSystem& combat) const {
     Rectangle modalRec = { (float)virtualWidth * 0.5f - 550.0f, (float)virtualHeight * 0.5f - 350.0f, 1100.0f, 700.0f };
     CombatRenderer::DrawCard(modalRec, (Color){ 20, 35, 28, 250 }, (Color){ 46, 204, 113, 255 }, 0.08f);
 
-    const char* vicTitle = "★ VICTORY - WAVE CLEARED! ★";
+    const char* vicTitle = "* VICTORY - WAVE CLEARED! *";
     int tw = MeasureText(vicTitle, 46);
     DrawText(vicTitle, (int)(modalRec.x + (modalRec.width - tw) * 0.5f), (int)modalRec.y + 60, 46, (Color){ 46, 204, 113, 255 });
 
@@ -100,7 +100,7 @@ void UIRenderer::DrawVictoryOverlay(const CombatSystem& combat) const {
 
     DrawText("Hero Restored +25 Health & Cooldowns Reset", (int)modalRec.x + 240, (int)modalRec.y + 200, 24, (Color){ 241, 196, 15, 255 });
 
-    std::string btnLabel = (combat.GetCurrentWave() >= combat.GetMaxWaves()) ? "★ ASCEND & PLAY AGAIN [SPACE / ENTER] ★" : "⚔️ ADVANCE TO NEXT WAVE [SPACE / ENTER]";
+    std::string btnLabel = (combat.GetCurrentWave() >= combat.GetMaxWaves()) ? "* ASCEND & PLAY AGAIN [SPACE / ENTER] *" : "ADVANCE TO NEXT WAVE [SPACE / ENTER]";
     Rectangle nextRec = { modalRec.x + modalRec.width * 0.5f - 340.0f, modalRec.y + 480.0f, 680.0f, 90.0f };
     CombatRenderer::DrawButton(nextRec, btnLabel.c_str(), (Color){ 39, 174, 96, 255 }, (Color){ 46, 204, 113, 255 }, false, false, 24);
 }
@@ -112,7 +112,7 @@ void UIRenderer::DrawGameOverOverlay(const CombatSystem& combat) const {
     Rectangle modalRec = { (float)virtualWidth * 0.5f - 550.0f, (float)virtualHeight * 0.5f - 350.0f, 1100.0f, 700.0f };
     CombatRenderer::DrawCard(modalRec, (Color){ 35, 20, 20, 250 }, (Color){ 231, 76, 60, 255 }, 0.08f);
 
-    const char* defTitle = "☠ DEFEAT - RUN CONCLUDED ☠";
+    const char* defTitle = "[X] DEFEAT - RUN CONCLUDED [X]";
     int tw = MeasureText(defTitle, 46);
     DrawText(defTitle, (int)(modalRec.x + (modalRec.width - tw) * 0.5f), (int)modalRec.y + 60, 46, (Color){ 231, 76, 60, 255 });
 
@@ -123,7 +123,7 @@ void UIRenderer::DrawGameOverOverlay(const CombatSystem& combat) const {
     DrawText("Tip: Utilize [Defense Stance] (+18 Shield) and [Parry] to counter devastating bursts!", (int)modalRec.x + 90, (int)modalRec.y + 220, 22, (Color){ 241, 196, 15, 255 });
 
     Rectangle retryRec = { modalRec.x + modalRec.width * 0.5f - 260.0f, modalRec.y + 480.0f, 520.0f, 90.0f };
-    CombatRenderer::DrawButton(retryRec, "🔄 RETRY RUN [SPACE / ENTER]", (Color){ 192, 57, 43, 255 }, (Color){ 231, 76, 60, 255 }, false, false, 24);
+    CombatRenderer::DrawButton(retryRec, "RETRY RUN [SPACE / ENTER]", (Color){ 192, 57, 43, 255 }, (Color){ 231, 76, 60, 255 }, false, false, 24);
 }
 
 void UIRenderer::DrawSettingsOverlay(int selectedIdx) const {
@@ -132,7 +132,7 @@ void UIRenderer::DrawSettingsOverlay(int selectedIdx) const {
     Rectangle modalRec = { (float)virtualWidth * 0.5f - 750.0f, (float)virtualHeight * 0.5f - 500.0f, 1500.0f, 1000.0f };
     CombatRenderer::DrawCard(modalRec, (Color){ 24, 30, 45, 255 }, (Color){ 241, 196, 15, 255 }, 0.06f);
 
-    DrawText("⚙️ VIDEO & DISPLAY RESOLUTION OPTIONS", (int)modalRec.x + 50, (int)modalRec.y + 45, 34, (Color){ 241, 196, 15, 255 });
+    DrawText("VIDEO & DISPLAY RESOLUTION OPTIONS", (int)modalRec.x + 50, (int)modalRec.y + 45, 34, (Color){ 241, 196, 15, 255 });
     DrawText("Navigate with [W/S] or [Up/Down], change with [A/D] or [Left/Right], or click directly.", (int)modalRec.x + 50, (int)modalRec.y + 90, 20, (Color){ 180, 190, 210, 255 });
 
     // 1. Resolution Options Section
@@ -163,8 +163,8 @@ void UIRenderer::DrawSettingsOverlay(int selectedIdx) const {
     Rectangle winBtnRec = { modalRec.x + 60.0f, y, 400.0f, 90.0f };
     Rectangle fsBtnRec = { modalRec.x + 490.0f, y, 400.0f, 90.0f };
 
-    CombatRenderer::DrawButton(winBtnRec, "🗖 Windowed Mode", (Color){ 30, 38, 55, 255 }, (Color){ 52, 152, 219, 255 }, !isFs, false, 22);
-    CombatRenderer::DrawButton(fsBtnRec, "⛶ Fullscreen Mode [F11]", (Color){ 30, 38, 55, 255 }, (Color){ 108, 92, 231, 255 }, isFs, false, 22);
+    CombatRenderer::DrawButton(winBtnRec, "Windowed Mode", (Color){ 30, 38, 55, 255 }, (Color){ 52, 152, 219, 255 }, !isFs, false, 22);
+    CombatRenderer::DrawButton(fsBtnRec, "Fullscreen Mode [F11]", (Color){ 30, 38, 55, 255 }, (Color){ 108, 92, 231, 255 }, isFs, false, 22);
 
     y += 135.0f;
 
@@ -179,10 +179,10 @@ void UIRenderer::DrawSettingsOverlay(int selectedIdx) const {
 
     DrawText("GRAPHICS & HARDWARE SPECIFICATIONS:", (int)infoRec.x + 25, (int)infoRec.y + 20, 20, (Color){ 241, 196, 15, 255 });
     
-    std::string internalRes = "• Internal Render Target Canvas: 2560 x 1440 (Native QHD High-DPI Vector Buffer)";
-    std::string scalingMode = "• Scaling Pipeline: Hardware Bilinear Filtering + 16:9 Letterboxing Filter";
-    std::string monInfo = "• Primary Monitor Native Resolution: " + std::to_string(monW) + " x " + std::to_string(monH);
-    std::string currentWin = "• Current Window / Screen Output: " + std::to_string(GetScreenWidth()) + " x " + std::to_string(GetScreenHeight()) + (isFs ? " (Fullscreen)" : " (Windowed)");
+    std::string internalRes = "- Internal Render Target Canvas: 2560 x 1440 (Native QHD High-DPI Vector Buffer)";
+    std::string scalingMode = "- Scaling Pipeline: Hardware Bilinear Filtering + 16:9 Letterboxing Filter";
+    std::string monInfo = "- Primary Monitor Native Resolution: " + std::to_string(monW) + " x " + std::to_string(monH);
+    std::string currentWin = "- Current Window / Screen Output: " + std::to_string(GetScreenWidth()) + " x " + std::to_string(GetScreenHeight()) + (isFs ? " (Fullscreen)" : " (Windowed)");
 
     DrawText(internalRes.c_str(), (int)infoRec.x + 25, (int)infoRec.y + 60, 18, (Color){ 190, 200, 220, 255 });
     DrawText(scalingMode.c_str(), (int)infoRec.x + 25, (int)infoRec.y + 95, 18, (Color){ 190, 200, 220, 255 });
@@ -201,36 +201,36 @@ void UIRenderer::DrawGuideOverlay() const {
     Rectangle modalRec = { (float)virtualWidth * 0.5f - 700.0f, (float)virtualHeight * 0.5f - 480.0f, 1400.0f, 960.0f };
     CombatRenderer::DrawCard(modalRec, (Color){ 24, 30, 45, 255 }, (Color){ 241, 196, 15, 255 }, 0.06f);
 
-    DrawText("★ ELEMENTAL REACTION & WEATHER COMPENDIUM", (int)modalRec.x + 50, (int)modalRec.y + 45, 34, (Color){ 241, 196, 15, 255 });
+    DrawText("ELEMENTAL REACTION & WEATHER COMPENDIUM", (int)modalRec.x + 50, (int)modalRec.y + 45, 34, (Color){ 241, 196, 15, 255 });
 
     float y = modalRec.y + 110.0f;
     DrawText("CORE ELEMENTAL REACTIONS:", (int)modalRec.x + 50, (int)y, 24, WHITE);
     y += 40.0f;
 
-    DrawText("• 💧 WET + ⚡ LIGHTNING = [SHOCK]    -> Massive burst + Arcs AoE chain damage to all alive enemies!", (int)modalRec.x + 60, (int)y, 20, (Color){ 241, 196, 15, 255 });
+    DrawText("- [WET] + [LIGHTNING] = [SHOCK]    -> Massive burst + Arcs AoE chain damage to all alive enemies!", (int)modalRec.x + 60, (int)y, 20, (Color){ 241, 196, 15, 255 });
     y += 36.0f;
-    DrawText("• 🛢️ OIL + 🔥 FIRE = [EXPLOSION]     -> Cataclysmic burst damage + inflicts Burning DoT to target!", (int)modalRec.x + 60, (int)y, 20, (Color){ 231, 76, 60, 255 });
+    DrawText("- [OIL] + [FIRE] = [EXPLOSION]     -> Cataclysmic burst damage + inflicts Burning DoT to target!", (int)modalRec.x + 60, (int)y, 20, (Color){ 231, 76, 60, 255 });
     y += 36.0f;
-    DrawText("• 💧 WET + ❄️ COLD = [FROZEN]        -> Immobilizes target completely; skips their next turn!", (int)modalRec.x + 60, (int)y, 20, (Color){ 162, 222, 255, 255 });
+    DrawText("- [WET] + [COLD] = [FROZEN]        -> Immobilizes target completely; skips their next turn!", (int)modalRec.x + 60, (int)y, 20, (Color){ 162, 222, 255, 255 });
     y += 36.0f;
-    DrawText("• 🔥 FIRE + ❄️ COLD = [MELT]         -> Superheated steam vaporization bonus damage.", (int)modalRec.x + 60, (int)y, 20, (Color){ 243, 156, 18, 255 });
+    DrawText("- [FIRE] + [COLD] = [MELT]         -> Superheated steam vaporization bonus damage.", (int)modalRec.x + 60, (int)y, 20, (Color){ 243, 156, 18, 255 });
     y += 36.0f;
-    DrawText("• 🛢️ OIL + ⚡ LIGHTNING = [PLASMA]    -> Piercing discharge bonus damage bypassing armor.", (int)modalRec.x + 60, (int)y, 20, (Color){ 155, 89, 182, 255 });
+    DrawText("- [OIL] + [LIGHTNING] = [PLASMA]   -> Piercing discharge bonus damage bypassing armor.", (int)modalRec.x + 60, (int)y, 20, (Color){ 155, 89, 182, 255 });
     y += 50.0f;
 
     DrawText("DYNAMIC WEATHER FORECAST MECHANICS:", (int)modalRec.x + 50, (int)y, 24, WHITE);
     y += 40.0f;
-    DrawText("• 🌧️ Rain: Applies [WET] globally each turn | Boosts Water DMG +35%", (int)modalRec.x + 60, (int)y, 20, (Color){ 52, 152, 219, 255 });
+    DrawText("- Rain: Applies [WET] globally each turn | Boosts Water DMG +35%", (int)modalRec.x + 60, (int)y, 20, (Color){ 52, 152, 219, 255 });
     y += 36.0f;
-    DrawText("• 🔥 Heatwave: Extreme dry heat | Boosts Fire DMG +50%", (int)modalRec.x + 60, (int)y, 20, (Color){ 230, 126, 34, 255 });
+    DrawText("- Heatwave: Extreme dry heat | Boosts Fire DMG +50%", (int)modalRec.x + 60, (int)y, 20, (Color){ 230, 126, 34, 255 });
     y += 36.0f;
-    DrawText("• ⛈️ Thunderstorm: Applies [WET] globally + Calls down 15 DMG Lightning Strikes!", (int)modalRec.x + 60, (int)y, 20, (Color){ 142, 68, 173, 255 });
+    DrawText("- Storm: Applies [WET] globally + Calls down 15 DMG Lightning Strikes!", (int)modalRec.x + 60, (int)y, 20, (Color){ 142, 68, 173, 255 });
     y += 36.0f;
-    DrawText("• 🌨️ Blizzard: Freezes all [WET] targets instantly | Boosts Cold DMG +30%", (int)modalRec.x + 60, (int)y, 20, (Color){ 129, 236, 236, 255 });
+    DrawText("- Blizzard: Freezes all [WET] targets instantly | Boosts Cold DMG +30%", (int)modalRec.x + 60, (int)y, 20, (Color){ 129, 236, 236, 255 });
     y += 36.0f;
-    DrawText("• 🌪️ Gale Winds: Swirls & spreads active elemental debuffs across all enemies!", (int)modalRec.x + 60, (int)y, 20, (Color){ 46, 204, 113, 255 });
+    DrawText("- Gale Winds: Swirls & spreads active elemental debuffs across all enemies!", (int)modalRec.x + 60, (int)y, 20, (Color){ 46, 204, 113, 255 });
     y += 36.0f;
-    DrawText("• 🧪 Acid Rain: Coats all units in combustible [OIL]!", (int)modalRec.x + 60, (int)y, 20, (Color){ 108, 92, 231, 255 });
+    DrawText("- Acid Rain: Coats all units in combustible [OIL]!", (int)modalRec.x + 60, (int)y, 20, (Color){ 108, 92, 231, 255 });
 
     Rectangle closeRec = { modalRec.x + modalRec.width * 0.5f - 140.0f, modalRec.y + modalRec.height - 90.0f, 280.0f, 60.0f };
     CombatRenderer::DrawButton(closeRec, "Close Guide [ESC]", (Color){ 39, 174, 96, 255 }, (Color){ 46, 204, 113, 255 }, false, false, 22);
