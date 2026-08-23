@@ -11,11 +11,13 @@ SRC = src/main.cpp \
       src/Systems/ElementalSystem.cpp \
       src/Systems/WeatherSystem.cpp \
       src/Systems/CombatSystem.cpp \
+      src/Systems/RewardSystem.cpp \
       src/Core/Localization.cpp \
       src/Renderer/ParticleSystem.cpp \
       src/Renderer/FontManager.cpp \
       src/Renderer/WeatherRenderer.cpp \
       src/Renderer/CombatRenderer.cpp \
+      src/Renderer/RewardRenderer.cpp \
       src/Renderer/UIRenderer.cpp
 
 TARGET = RougelikeWithAgy.exe

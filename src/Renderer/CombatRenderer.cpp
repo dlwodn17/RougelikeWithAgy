@@ -313,17 +313,33 @@ void CombatRenderer::DrawSkillPanel(const CombatSystem& combat) {
         }
 
         std::string hotkeyTitle = "[" + std::to_string(i + 1) + "] " + skillDisplayName;
-        Color themeCol = ToRaylibColor(skill.GetThemeColor());
+        Color themeCol = ToRaylibColor(skill.GetEffectiveThemeColor());
         FontManager::DrawText(hotkeyTitle.c_str(), (int)rec.x + 18, (int)rec.y + 16, FontSize::BUTTON_MEDIUM, isReady ? themeCol : (Color){ 130, 135, 145, 255 });
 
-        Element effElem = skill.GetEffectiveElement();
+        Element effElem = skill.GetFinalElement();
         const char* elemName = Localization::GetElementName(effElem);
         FontManager::DrawText(elemName, (int)rec.x + 18, (int)rec.y + 52, FontSize::BODY_SMALL, ToRaylibColor(ElementalSystem::GetElementColor(effElem)));
 
-        std::string dmgText = std::to_string(skill.GetEffectiveDamage()) + (Localization::IsKorean() ? " 피해" : " DMG");
+        std::string dmgText = std::to_string(skill.GetFinalDamage()) + (Localization::IsKorean() ? " 피해" : " DMG");
         FontManager::DrawText(dmgText.c_str(), (int)rec.x + (int)rec.width - 110, (int)rec.y + 52, FontSize::BODY_REGULAR, (Color){ 241, 196, 15, 255 });
 
-        FontManager::DrawText(skill.GetDescription().c_str(), (int)rec.x + 18, (int)rec.y + 92, FontSize::CAPTION, (Color){ 180, 190, 205, 255 });
+        FontManager::DrawText(skill.GetDescription().c_str(), (int)rec.x + 18, (int)rec.y + 88, FontSize::CAPTION - 1, (Color){ 180, 190, 205, 255 });
+
+        // Render Socketed Rune Badges
+        const auto& runes = skill.GetSocketedRunes();
+        if (!runes.empty()) {
+            float runeBadgeY = rec.y + rec.height - 42.0f;
+            float runeBadgeX = rec.x + 15.0f;
+            for (const auto& r : runes) {
+                std::string rText = "★ " + r.GetName();
+                int rtw = FontManager::MeasureText(rText.c_str(), FontSize::CAPTION);
+                Rectangle rRec = { runeBadgeX, runeBadgeY, (float)rtw + 14.0f, 26.0f };
+                DrawRectangleRounded(rRec, 0.25f, 4, (Color){ 16, 20, 30, 240 });
+                DrawRectangleRoundedLinesEx(rRec, 0.25f, 4, 1.2f, ToRaylibColor(r.runeColor));
+                FontManager::DrawText(rText.c_str(), (int)rRec.x + 7, (int)rRec.y + 4, FontSize::CAPTION, ToRaylibColor(r.runeColor));
+                runeBadgeX += rRec.width + 8.0f;
+            }
+        }
 
         if (!isReady) {
             DrawRectangleRounded(rec, 0.08f, 6, (Color){ 10, 12, 18, 220 });

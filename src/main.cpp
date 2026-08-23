@@ -64,16 +64,41 @@ void RunCoreElementalUnitTests() {
     std::cout << "   * Chain AoE Flag: " << (report.reaction.chainAoE ? "TRUE (Deals 12 AoE DMG to all other enemies)" : "FALSE") << "\n";
     std::cout << "   * Status after consumption: " << (dummyEnemy.HasElement(Element::WET) ? "WET remains" : "WET consumed by reaction (CLEAN)") << "\n\n";
 
-    // Test 4: Extensible Skill Mutation Runes (Phase 3 Prep)
+    // Test 4: Extensible Skill Mutation Runes (Phase 3)
     std::cout << "[Test 4] Extensible Skill & Mutation Rune Modifiers:\n";
-    Skill baseSlash("slash", "Basic Slash", "Deals physical damage", Element::NONE, Element::NONE, 15, 0, 0);
-    std::cout << " - Original Skill: " << baseSlash.GetName() << " | Element: " << GetElementNameStr(baseSlash.GetEffectiveElement()) << " | Damage: " << baseSlash.GetEffectiveDamage() << "\n";
+    Skill baseSlash("slash", "Basic Slash", "Deals physical damage", Element::NONE, Element::NONE, 20, 0, 1);
+    std::cout << " - Original Skill: " << baseSlash.GetName() << " | Element: " << GetElementNameStr(baseSlash.GetFinalElement()) << " | Damage: " << baseSlash.GetFinalDamage() << " | Cooldown: " << baseSlash.GetFinalCooldown() << "\n";
 
-    SkillRune frostRune("rune_frost", "Glacial Mutation Rune", "Mutates skill into Ice and grants +10 damage", Element::COLD, 10);
-    baseSlash.AttachRune(frostRune);
-    std::cout << " - After Socketing '" << frostRune.name << "':\n";
-    std::cout << "   * Effective Element: " << GetElementNameStr(baseSlash.GetEffectiveElement()) << " (Mutated from NONE)\n";
-    std::cout << "   * Effective Damage: " << baseSlash.GetEffectiveDamage() << " (15 + 10 = 25)\n";
+    Rune frostfire("rune_frostfire", "Frostfire Rune", "서리불꽃 룬", "Mutates to Cold (+6 Dmg)", "냉기로 변환", RuneModifierType::ELEMENT_CONVERSION);
+    frostfire.overrideElement = Element::COLD;
+    frostfire.bonusDamage = 6;
+    frostfire.freezeWetTarget = true;
+    baseSlash.AttachRune(frostfire);
+
+    std::cout << " - Socketed [Rune 1: " << frostfire.name << "]:\n";
+    std::cout << "   * Final Element: " << GetElementNameStr(baseSlash.GetFinalElement()) << " (Expected: Cold)\n";
+    std::cout << "   * Final Damage: " << baseSlash.GetFinalDamage() << " (Expected: 20 + 6 = 26)\n";
+    std::cout << "   * Has Freeze WET Special: " << (baseSlash.HasFreezeWet() ? "PASS" : "FAIL") << "\n";
+
+    Rune volatileCore("rune_volatile_core", "Volatile Core", "농축 기폭제", "+50% Dmg, +1 CD", "+50% 피해, +1 CD", RuneModifierType::STAT_MUTATION);
+    volatileCore.damageMultiplier = 1.50f;
+    volatileCore.cooldownDelta = 1;
+    baseSlash.AttachRune(volatileCore);
+
+    std::cout << " - Socketed [Rune 2: " << volatileCore.name << "]:\n";
+    std::cout << "   * Final Damage: " << baseSlash.GetFinalDamage() << " (Expected: (20 + 6) * 1.5 = 39)\n";
+    std::cout << "   * Final Cooldown: " << baseSlash.GetFinalCooldown() << " (Expected: 1 + 1 = 2)\n";
+    std::cout << "   * Total Socketed Runes: " << baseSlash.GetSocketedRunes().size() << " / " << Skill::MAX_RUNE_SLOTS << "\n";
+
+    // Test 5: Reward System Draft Verification
+    std::cout << "\n[Test 5] RewardSystem Rune Draft Generation:\n";
+    RewardSystem rewardSys;
+    rewardSys.GenerateRewardRunes(3);
+    const auto& offered = rewardSys.GetOfferedRunes();
+    std::cout << " - Offered Runes Count: " << offered.size() << "\n";
+    for (size_t i = 0; i < offered.size(); ++i) {
+        std::cout << "   [" << (i + 1) << "] " << offered[i].name << " (" << offered[i].nameKo << ") -> " << offered[i].description << "\n";
+    }
     std::cout << "=================================================================\n\n";
 }
 
@@ -83,7 +108,7 @@ int main(int argc, char* argv[]) {
 
     // If --test CLI argument provided, exit after running console tests
     if (argc > 1 && std::string(argv[1]) == "--test") {
-        std::cout << "[SUCCESS] All Step 1 Elemental Reaction unit tests passed successfully!\n";
+        std::cout << "[SUCCESS] All Step 1 & Step 3 Elemental Reaction and Mutation Rune unit tests passed successfully!\n";
         return 0;
     }
 

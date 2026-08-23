@@ -194,7 +194,10 @@ void CombatSystem::ResolvePlayerAction(int skillIdx, int targetIdx, StanceType s
     player.UseSkill(skillIdx);
 
     Enemy& target = enemies[targetIdx];
-    int rawDmg = skill->GetEffectiveDamage();
+    int rawDmg = skill->GetFinalDamage(player.GetShield());
+    if (skill->GetFinalShield() > 0) {
+        player.AddShield(skill->GetFinalShield());
+    }
 
     if (stance == StanceType::ATTACK) {
         rawDmg = static_cast<int>(rawDmg * 1.40f);
@@ -202,7 +205,7 @@ void CombatSystem::ResolvePlayerAction(int skillIdx, int targetIdx, StanceType s
 
     WeatherType weather = weatherSystem.GetCurrentWeather();
     float weatherMult = 1.0f;
-    Element effElem = skill->GetEffectiveElement();
+    Element effElem = skill->GetFinalElement();
     if (effElem == Element::FIRE && weather == WeatherType::HEATWAVE) weatherMult = 1.50f;
     else if (effElem == Element::WET && weather == WeatherType::RAIN) weatherMult = 1.35f;
     else if (effElem == Element::COLD && weather == WeatherType::BLIZZARD) weatherMult = 1.35f;
@@ -210,7 +213,17 @@ void CombatSystem::ResolvePlayerAction(int skillIdx, int targetIdx, StanceType s
 
     DamageReport report = target.ApplyIncomingDamage(rawDmg, effElem, StanceType::ATTACK, weatherMult);
 
-    Element secElem = skill->GetEffectiveSecondaryElement();
+    // Rune Special: Freeze WET target
+    if (skill->HasFreezeWet() && target.IsAlive() && target.HasElement(Element::WET)) {
+        target.SetFrozen(true);
+        target.ClearElement(Element::WET);
+        report.reaction.triggered = true;
+        report.reaction.type = ReactionType::FROZEN;
+        report.reaction.name = "FROZEN";
+        report.reaction.description = "Frostfire rune flash-freezes drenched enemy!";
+    }
+
+    Element secElem = skill->GetFinalSecondaryElement();
     if (secElem != Element::NONE && target.IsAlive()) {
         DamageReport secReport = target.ApplyIncomingDamage(0, secElem, StanceType::ATTACK, weatherMult);
         if (secReport.reaction.triggered) {
@@ -218,7 +231,7 @@ void CombatSystem::ResolvePlayerAction(int skillIdx, int targetIdx, StanceType s
         }
     }
 
-    Color themeCol = ToRaylibColor(skill->GetThemeColor());
+    Color themeCol = ToRaylibColor(skill->GetEffectiveThemeColor());
     if (particleSystem) {
         particleSystem->SpawnSlashEffect(player.GetPosition(), target.GetPosition(), themeCol);
         particleSystem->SpawnHitSparks(target.GetPosition(), effElem, 15);
@@ -304,6 +317,24 @@ void CombatSystem::ResolvePlayerAction(int skillIdx, int targetIdx, StanceType s
                     } else {
                         AddCombatLog("   -> Arc struck " + enemies[i].GetName() + " for " + std::to_string(chainReport.mitigatedDamage) + " dmg!", ColorRGBA{ 241, 196, 15, 255 });
                     }
+                }
+            }
+        }
+    }
+
+    // Rune Special: Chain AoE on hit
+    if (skill->HasChainAoE() && !report.reaction.chainAoE) {
+        for (size_t i = 0; i < enemies.size(); ++i) {
+            if (static_cast<int>(i) != targetIdx && enemies[i].IsAlive()) {
+                DamageReport chainReport = enemies[i].ApplyIncomingDamage(10, Element::LIGHTNING);
+                if (particleSystem) {
+                    particleSystem->SpawnHitSparks(enemies[i].GetPosition(), Element::LIGHTNING, 10);
+                    particleSystem->AddFloatingText(enemies[i].GetPosition(), "-" + std::to_string(chainReport.mitigatedDamage) + " ARC", (Color){ 241, 196, 15, 255 });
+                }
+                if (Localization::IsKorean()) {
+                    AddCombatLog("   -> [연쇄 전도체] 아크가 " + enemies[i].GetName() + "에게 " + std::to_string(chainReport.mitigatedDamage) + " 피해를 입혔습니다!", ColorRGBA{ 241, 196, 15, 255 });
+                } else {
+                    AddCombatLog("   -> [Chain Conductor] Arc struck " + enemies[i].GetName() + " for " + std::to_string(chainReport.mitigatedDamage) + " dmg!", ColorRGBA{ 241, 196, 15, 255 });
                 }
             }
         }

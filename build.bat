@@ -27,7 +27,7 @@ if not exist libraylib.a (
     del rglfw.o rcore.o rshapes.o rtextures.o rtext.o rmodels.o raudio.o utils.o
 )
 
-g++ -std=c++17 -Wall -Wextra -O2 -Iinclude -Ithird_party/raylib/src src/main.cpp src/GameState.cpp src/Entities/Entity.cpp src/Entities/Player.cpp src/Entities/Enemy.cpp src/Entities/Skill.cpp src/Systems/ElementalSystem.cpp src/Systems/WeatherSystem.cpp src/Systems/CombatSystem.cpp src/Core/Localization.cpp src/Renderer/ParticleSystem.cpp src/Renderer/FontManager.cpp src/Renderer/WeatherRenderer.cpp src/Renderer/CombatRenderer.cpp src/Renderer/UIRenderer.cpp -L. -lraylib -lopengl32 -lgdi32 -lwinmm -o RougelikeWithAgy.exe
+g++ -std=c++17 -Wall -Wextra -O2 -Iinclude -Ithird_party/raylib/src src/main.cpp src/GameState.cpp src/Entities/Entity.cpp src/Entities/Player.cpp src/Entities/Enemy.cpp src/Entities/Skill.cpp src/Systems/ElementalSystem.cpp src/Systems/WeatherSystem.cpp src/Systems/CombatSystem.cpp src/Systems/RewardSystem.cpp src/Core/Localization.cpp src/Renderer/ParticleSystem.cpp src/Renderer/FontManager.cpp src/Renderer/WeatherRenderer.cpp src/Renderer/CombatRenderer.cpp src/Renderer/RewardRenderer.cpp src/Renderer/UIRenderer.cpp -L. -lraylib -lopengl32 -lgdi32 -lwinmm -o RougelikeWithAgy.exe
 
 if %errorlevel% neq 0 (
     echo.

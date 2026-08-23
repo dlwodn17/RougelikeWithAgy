@@ -1,4 +1,5 @@
 #include "Entities/Skill.hpp"
+#include <algorithm>
 
 Skill::Skill(const std::string& skillId, const std::string& skillName, const std::string& desc,
              Element prim, Element sec, int dmg, int shield, int cooldown, TargetType target, ColorRGBA color)
@@ -7,9 +8,9 @@ Skill::Skill(const std::string& skillId, const std::string& skillName, const std
       currentCooldown(0), targetType(target), themeColor(color) {
 }
 
-Element Skill::GetEffectiveElement() const {
+Element Skill::GetFinalElement() const {
     Element elem = baseElement;
-    for (const auto& rune : attachedRunes) {
+    for (const auto& rune : socketedRunes) {
         if (rune.overrideElement != Element::NONE) {
             elem = rune.overrideElement;
         }
@@ -17,9 +18,9 @@ Element Skill::GetEffectiveElement() const {
     return elem;
 }
 
-Element Skill::GetEffectiveSecondaryElement() const {
+Element Skill::GetFinalSecondaryElement() const {
     Element sec = secondaryElement;
-    for (const auto& rune : attachedRunes) {
+    for (const auto& rune : socketedRunes) {
         if (rune.addSecondaryElement != Element::NONE) {
             sec = rune.addSecondaryElement;
         }
@@ -27,49 +28,90 @@ Element Skill::GetEffectiveSecondaryElement() const {
     return sec;
 }
 
-int Skill::GetEffectiveDamage() const {
+int Skill::GetFinalDamage(int playerShield) const {
     float dmg = static_cast<float>(baseDamage);
     int flatBonus = 0;
     float mult = 1.0f;
+    int shieldBonus = 0;
 
-    for (const auto& rune : attachedRunes) {
+    for (const auto& rune : socketedRunes) {
         flatBonus += rune.bonusDamage;
         mult *= rune.damageMultiplier;
+        if (rune.shieldScalingDamage && playerShield > 0) {
+            shieldBonus += playerShield;
+        }
     }
 
-    return std::max(0, static_cast<int>((dmg + flatBonus) * mult));
+    int totalDmg = static_cast<int>((dmg + flatBonus) * mult) + shieldBonus;
+    return std::max(0, totalDmg);
 }
 
-int Skill::GetEffectiveShield() const {
+int Skill::GetFinalShield() const {
     int shield = baseShield;
-    for (const auto& rune : attachedRunes) {
+    for (const auto& rune : socketedRunes) {
         shield += rune.bonusShield;
     }
     return std::max(0, shield);
 }
 
-int Skill::GetEffectiveMaxCooldown() const {
+int Skill::GetFinalCooldown() const {
     int cd = maxCooldown;
-    for (const auto& rune : attachedRunes) {
+    for (const auto& rune : socketedRunes) {
         cd += rune.cooldownDelta;
     }
     return std::max(0, cd);
 }
 
-void Skill::AttachRune(const SkillRune& rune) {
-    attachedRunes.push_back(rune);
+ColorRGBA Skill::GetEffectiveThemeColor() const {
+    Element finalElem = GetFinalElement();
+    if (finalElem != baseElement && finalElem != Element::NONE) {
+        return GetElementColorRGBA(finalElem);
+    }
+    return themeColor;
+}
+
+bool Skill::HasChainAoE() const {
+    for (const auto& rune : socketedRunes) {
+        if (rune.chainAoEOnHit) return true;
+    }
+    return false;
+}
+
+bool Skill::HasFreezeWet() const {
+    for (const auto& rune : socketedRunes) {
+        if (rune.freezeWetTarget) return true;
+    }
+    return false;
+}
+
+bool Skill::HasShieldScaling() const {
+    for (const auto& rune : socketedRunes) {
+        if (rune.shieldScalingDamage) return true;
+    }
+    return false;
+}
+
+bool Skill::AttachRune(const Rune& rune) {
+    if (socketedRunes.size() < MAX_RUNE_SLOTS) {
+        socketedRunes.push_back(rune);
+        return true;
+    } else {
+        // If slots are full, replace the second rune slot
+        socketedRunes.back() = rune;
+        return true;
+    }
 }
 
 void Skill::RemoveRune(const std::string& runeId) {
-    attachedRunes.erase(
-        std::remove_if(attachedRunes.begin(), attachedRunes.end(),
-                       [&runeId](const SkillRune& r) { return r.id == runeId; }),
-        attachedRunes.end()
+    socketedRunes.erase(
+        std::remove_if(socketedRunes.begin(), socketedRunes.end(),
+                       [&runeId](const Rune& r) { return r.id == runeId; }),
+        socketedRunes.end()
     );
 }
 
 void Skill::ClearRunes() {
-    attachedRunes.clear();
+    socketedRunes.clear();
 }
 
 SkillSystem::SkillSystem() {

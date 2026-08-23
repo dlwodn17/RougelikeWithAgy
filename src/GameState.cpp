@@ -9,6 +9,7 @@ GameManager::GameManager()
 void GameManager::Initialize() {
     FontManager::Initialize();
     uiRenderer.Initialize();
+    rewardSystem.InitializeRunePool();
     combatSystem.SetParticleSystem(&particleSystem);
     combatSystem.InitializeNewRun();
 }
@@ -186,6 +187,7 @@ void GameManager::Update(float dt) {
     switch (state) {
         case AppState::TITLE:
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
+                rewardSystem.Reset();
                 combatSystem.InitializeNewRun();
                 state = AppState::BATTLE;
             }
@@ -193,6 +195,7 @@ void GameManager::Update(float dt) {
                 float titleX = (float)uiRenderer.GetVirtualWidth() * 0.5f - 650.0f;
                 Rectangle startRec = { titleX + 1300.0f * 0.5f - 260.0f, 160.0f + 535.0f, 520.0f, 85.0f };
                 if (CheckCollisionPointRec(mousePos, startRec)) {
+                    rewardSystem.Reset();
                     combatSystem.InitializeNewRun();
                     state = AppState::BATTLE;
                 }
@@ -280,14 +283,105 @@ void GameManager::Update(float dt) {
 
             // Check if CombatSystem entered victory or defeat
             if (combatSystem.GetPhase() == CombatPhase::VICTORY_SCREEN) {
-                state = AppState::VICTORY;
+                if (combatSystem.GetCurrentWave() < combatSystem.GetMaxWaves()) {
+                    rewardSystem.GenerateRewardRunes(3);
+                    state = AppState::REWARD_SCREEN;
+                } else {
+                    state = AppState::VICTORY;
+                }
             } else if (combatSystem.GetPhase() == CombatPhase::DEFEAT_SCREEN) {
                 state = AppState::GAME_OVER;
             }
 
             // Quick restart hotkey
             if (IsKeyPressed(KEY_R)) {
+                rewardSystem.Reset();
                 combatSystem.RestartGame();
+            }
+            break;
+
+        case AppState::REWARD_SCREEN:
+            particleSystem.Update(dt, combatSystem.GetWeatherSystem().GetCurrentWeather());
+
+            if (!rewardSystem.IsSocketingPopupOpen()) {
+                // Keyboard 1, 2, 3 selection
+                if (IsKeyPressed(KEY_ONE)) rewardSystem.SelectRune(0);
+                if (IsKeyPressed(KEY_TWO)) rewardSystem.SelectRune(1);
+                if (IsKeyPressed(KEY_THREE)) rewardSystem.SelectRune(2);
+
+                // Mouse click on 3 rune cards
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                    float cardW = 680.0f;
+                    float cardH = 960.0f;
+                    float spacing = 50.0f;
+                    float totalW = 3 * cardW + 2 * spacing;
+                    float startX = ((float)uiRenderer.GetVirtualWidth() - totalW) * 0.5f;
+                    float startY = 260.0f;
+                    for (int i = 0; i < 3; ++i) {
+                        Rectangle cardRec = { startX + (float)i * (cardW + spacing), startY, cardW, cardH };
+                        if (CheckCollisionPointRec(mousePos, cardRec)) {
+                            rewardSystem.SelectRune(i);
+                            break;
+                        }
+                    }
+                }
+            } else {
+                // Socketing popup is active
+                if (IsKeyPressed(KEY_ESCAPE)) {
+                    rewardSystem.CancelSelection();
+                }
+                if (IsKeyPressed(KEY_ONE)) {
+                    rewardSystem.SocketRuneToSkill(combatSystem.GetSkillSystem(), 0);
+                    combatSystem.NextWave();
+                    state = AppState::BATTLE;
+                    return;
+                }
+                if (IsKeyPressed(KEY_TWO)) {
+                    rewardSystem.SocketRuneToSkill(combatSystem.GetSkillSystem(), 1);
+                    combatSystem.NextWave();
+                    state = AppState::BATTLE;
+                    return;
+                }
+                if (IsKeyPressed(KEY_THREE)) {
+                    rewardSystem.SocketRuneToSkill(combatSystem.GetSkillSystem(), 2);
+                    combatSystem.NextWave();
+                    state = AppState::BATTLE;
+                    return;
+                }
+                if (IsKeyPressed(KEY_FOUR)) {
+                    rewardSystem.SocketRuneToSkill(combatSystem.GetSkillSystem(), 3);
+                    combatSystem.NextWave();
+                    state = AppState::BATTLE;
+                    return;
+                }
+
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                    float modalX = (float)uiRenderer.GetVirtualWidth() * 0.5f - 850.0f;
+                    float modalY = (float)uiRenderer.GetVirtualHeight() * 0.5f - 460.0f;
+                    float skillCardW = 370.0f;
+                    float skillCardH = 460.0f;
+                    float skillSpacing = 25.0f;
+                    float startX = modalX + 60.0f;
+                    float startY = modalY + 275.0f;
+
+                    // Click on one of 4 skill cards
+                    for (int i = 0; i < 4; ++i) {
+                        Rectangle scRec = { startX + (float)i * (skillCardW + skillSpacing), startY, skillCardW, skillCardH };
+                        if (CheckCollisionPointRec(mousePos, scRec)) {
+                            rewardSystem.SocketRuneToSkill(combatSystem.GetSkillSystem(), i);
+                            combatSystem.NextWave();
+                            state = AppState::BATTLE;
+                            return;
+                        }
+                    }
+
+                    // Click Cancel button
+                    Rectangle cancelRec = { modalX + 1700.0f * 0.5f - 180.0f, modalY + 920.0f - 70.0f, 360.0f, 50.0f };
+                    if (CheckCollisionPointRec(mousePos, cancelRec)) {
+                        rewardSystem.CancelSelection();
+                        return;
+                    }
+                }
             }
             break;
 
@@ -295,6 +389,7 @@ void GameManager::Update(float dt) {
             particleSystem.Update(dt, combatSystem.GetWeatherSystem().GetCurrentWeather());
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
                 if (combatSystem.GetCurrentWave() >= combatSystem.GetMaxWaves()) {
+                    rewardSystem.Reset();
                     combatSystem.RestartGame();
                 } else {
                     combatSystem.NextWave();
@@ -305,6 +400,7 @@ void GameManager::Update(float dt) {
                 Rectangle nextRec = { (float)uiRenderer.GetVirtualWidth() * 0.5f - 340.0f, (float)uiRenderer.GetVirtualHeight() * 0.5f - 350.0f + 480.0f, 680.0f, 90.0f };
                 if (CheckCollisionPointRec(mousePos, nextRec)) {
                     if (combatSystem.GetCurrentWave() >= combatSystem.GetMaxWaves()) {
+                        rewardSystem.Reset();
                         combatSystem.RestartGame();
                     } else {
                         combatSystem.NextWave();
@@ -317,12 +413,14 @@ void GameManager::Update(float dt) {
         case AppState::GAME_OVER:
             particleSystem.Update(dt, combatSystem.GetWeatherSystem().GetCurrentWeather());
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
+                rewardSystem.Reset();
                 combatSystem.RestartGame();
                 state = AppState::BATTLE;
             }
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                 Rectangle retryRec = { (float)uiRenderer.GetVirtualWidth() * 0.5f - 260.0f, (float)uiRenderer.GetVirtualHeight() * 0.5f - 350.0f + 480.0f, 520.0f, 90.0f };
                 if (CheckCollisionPointRec(mousePos, retryRec)) {
+                    rewardSystem.Reset();
                     combatSystem.RestartGame();
                     state = AppState::BATTLE;
                 }
@@ -335,5 +433,13 @@ void GameManager::Update(float dt) {
 }
 
 void GameManager::Draw() {
-    uiRenderer.Render(combatSystem, particleSystem, state, selectedSettingIdx, showGuide, showSettings);
+    if (state == AppState::REWARD_SCREEN) {
+        CombatRenderer::DrawBackground(combatSystem.GetWeatherSystem().GetCurrentWeather());
+        particleSystem.Draw();
+        RewardRenderer::DrawRewardScreen(rewardSystem, combatSystem.GetSkillSystem());
+        if (showGuide) uiRenderer.DrawGuideOverlay();
+        if (showSettings) uiRenderer.DrawSettingsOverlay(selectedSettingIdx);
+    } else {
+        uiRenderer.Render(combatSystem, particleSystem, state, selectedSettingIdx, showGuide, showSettings);
+    }
 }

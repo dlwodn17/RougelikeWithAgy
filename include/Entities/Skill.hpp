@@ -1,32 +1,18 @@
 #pragma once
 
 #include "Core/Types.hpp"
+#include "Entities/Rune.hpp"
 #include <vector>
 #include <string>
+#include <algorithm>
 
 // ============================================================================
-// Skill Mutation Rune (Extensible modifier for Phase 3 Mutation Runes)
-// ============================================================================
-struct SkillRune {
-    std::string id;
-    std::string name;
-    std::string description;
-    Element overrideElement = Element::NONE;     // If not NONE, mutates primary element
-    Element addSecondaryElement = Element::NONE; // Additional element tag
-    int bonusDamage = 0;
-    float damageMultiplier = 1.0f;
-    int bonusShield = 0;
-    int cooldownDelta = 0;
-
-    SkillRune(const std::string& runeId = "", const std::string& runeName = "",
-              const std::string& desc = "", Element elem = Element::NONE, int bonusDmg = 0)
-        : id(runeId), name(runeName), description(desc), overrideElement(elem), bonusDamage(bonusDmg) {}
-};
-
-// ============================================================================
-// Skill Class (Pure C++17, Rune Mutation Support)
+// Skill Class (Pure C++17, Rune Socketing & Dynamic Mutation Support)
 // ============================================================================
 class Skill {
+public:
+    static constexpr size_t MAX_RUNE_SLOTS = 2;
+
 private:
     std::string id;
     std::string name;
@@ -40,8 +26,8 @@ private:
     TargetType targetType;
     ColorRGBA themeColor;
 
-    // Attached Mutation Runes
-    std::vector<SkillRune> attachedRunes;
+    // Attached Mutation Runes (Max 2 Slots)
+    std::vector<Rune> socketedRunes;
 
 public:
     Skill(const std::string& skillId = "", const std::string& skillName = "", const std::string& desc = "",
@@ -50,21 +36,39 @@ public:
           ColorRGBA color = { 255, 255, 255, 255 });
 
     // Dynamic Effective Value Queries (Calculated with Runes)
-    Element GetEffectiveElement() const;
-    Element GetEffectiveSecondaryElement() const;
-    int GetEffectiveDamage() const;
-    int GetEffectiveShield() const;
-    int GetEffectiveMaxCooldown() const;
+    Element GetFinalElement() const;
+    Element GetEffectiveElement() const { return GetFinalElement(); }
+
+    Element GetFinalSecondaryElement() const;
+    Element GetEffectiveSecondaryElement() const { return GetFinalSecondaryElement(); }
+
+    int GetFinalDamage(int playerShield = 0) const;
+    int GetEffectiveDamage(int playerShield = 0) const { return GetFinalDamage(playerShield); }
+
+    int GetFinalShield() const;
+    int GetEffectiveShield() const { return GetFinalShield(); }
+
+    int GetFinalCooldown() const;
+    int GetEffectiveMaxCooldown() const { return GetFinalCooldown(); }
+
+    ColorRGBA GetEffectiveThemeColor() const;
+
+    // Rune Special Mechanics Queries
+    bool HasChainAoE() const;
+    bool HasFreezeWet() const;
+    bool HasShieldScaling() const;
 
     // Rune Socketing Management
-    void AttachRune(const SkillRune& rune);
+    bool CanSocketRune() const { return socketedRunes.size() < MAX_RUNE_SLOTS; }
+    bool AttachRune(const Rune& rune);
     void RemoveRune(const std::string& runeId);
     void ClearRunes();
-    const std::vector<SkillRune>& GetAttachedRunes() const { return attachedRunes; }
+    const std::vector<Rune>& GetSocketedRunes() const { return socketedRunes; }
+    const std::vector<Rune>& GetAttachedRunes() const { return socketedRunes; }
 
     // Cooldown Management
     bool IsReady() const { return currentCooldown <= 0; }
-    void TriggerCooldown() { currentCooldown = GetEffectiveMaxCooldown(); }
+    void TriggerCooldown() { currentCooldown = GetFinalCooldown(); }
     void UpdateCooldown() { if (currentCooldown > 0) currentCooldown--; }
     void ResetCooldown() { currentCooldown = 0; }
 

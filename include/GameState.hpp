@@ -2,14 +2,17 @@
 
 #include "Core/Constants.hpp"
 #include "Systems/CombatSystem.hpp"
+#include "Systems/RewardSystem.hpp"
 #include "Renderer/ParticleSystem.hpp"
 #include "Renderer/UIRenderer.hpp"
+#include "Renderer/RewardRenderer.hpp"
 
 class GameManager {
 private:
     AppState state;
     ParticleSystem particleSystem;
     CombatSystem combatSystem;
+    RewardSystem rewardSystem;
     UIRenderer uiRenderer;
     bool showSettings;
     bool showGuide;
@@ -30,4 +33,7 @@ public:
 
     bool IsGuideVisible() const { return showGuide; }
     void ToggleGuide() { showGuide = !showGuide; if (showGuide) showSettings = false; }
+
+    RewardSystem& GetRewardSystem() { return rewardSystem; }
+    const RewardSystem& GetRewardSystem() const { return rewardSystem; }
 };
