@@ -3,25 +3,38 @@
 #include "Common.hpp"
 
 int main() {
-    // Window & Display Configuration for 2560x1440 & Fullscreen support
-    SetConfigFlags(FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI);
+    // Window & Display Configuration (No FLAG_WINDOW_HIGHDPI to prevent Windows viewport scaling mismatches)
+    SetConfigFlags(FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
     
-    // Initial display sizing
+    // Auto-detect best initial window size based on monitor resolution
     int monitor = GetCurrentMonitor();
     int monWidth = GetMonitorWidth(monitor);
     int monHeight = GetMonitorHeight(monitor);
 
-    // Target 2560x1440 native resolution, or fit monitor initially
-    int initWinWidth = 2560;
-    int initWinHeight = 1440;
-    if (monWidth > 0 && monHeight > 0 && (monWidth < 2560 || monHeight < 1440)) {
-        initWinWidth = (int)(monWidth * 0.9f);
-        initWinHeight = (int)(monHeight * 0.9f);
+    DisplaySettings::AutoDetectDefaultResolution();
+    int defaultIdx = DisplaySettings::GetCurrentResolutionIndex();
+    const auto& resList = DisplaySettings::GetResolutions();
+    int initWinWidth = resList[defaultIdx].width;
+    int initWinHeight = resList[defaultIdx].height;
+
+    // Safety clamp for windowed borders
+    if (monWidth > 0 && monHeight > 0) {
+        if (initWinWidth >= monWidth && defaultIdx > 0) {
+            defaultIdx--;
+            initWinWidth = resList[defaultIdx].width;
+            initWinHeight = resList[defaultIdx].height;
+            DisplaySettings::SetResolutionIndex(defaultIdx);
+        }
     }
 
-    InitWindow(initWinWidth, initWinHeight, "RougelikeWithAgy - 2560x1440 Fullscreen Elemental Roguelike");
+    InitWindow(initWinWidth, initWinHeight, "RougelikeWithAgy - Elemental Reaction Roguelike");
     SetWindowMinSize(960, 540);
     SetTargetFPS(60);
+
+    // Center window on primary monitor
+    if (monWidth > 0 && monHeight > 0) {
+        SetWindowPosition((monWidth - initWinWidth) / 2, (monHeight - initWinHeight) / 2);
+    }
 
     // Create 2560x1440 Native Virtual Canvas
     RenderTexture2D targetCanvas = LoadRenderTexture(ScreenConfig::VIRTUAL_WIDTH, ScreenConfig::VIRTUAL_HEIGHT);
@@ -50,18 +63,22 @@ int main() {
         game.Draw();
         EndTextureMode();
 
-        // 3. Render Canvas Scaled to Window / Fullscreen Screen Buffer (with letterboxing)
+        // 3. Render Canvas Scaled to Physical Framebuffer (with exact 16:9 aspect ratio)
         BeginDrawing();
         ClearBackground(BLACK);
 
-        int currentW = GetScreenWidth();
-        int currentH = GetScreenHeight();
-        float scale = std::min((float)currentW / (float)ScreenConfig::VIRTUAL_WIDTH, (float)currentH / (float)ScreenConfig::VIRTUAL_HEIGHT);
+        int renderW = GetRenderWidth();
+        int renderH = GetRenderHeight();
+        if (renderW <= 0) renderW = GetScreenWidth();
+        if (renderH <= 0) renderH = GetScreenHeight();
+
+        float scale = std::min((float)renderW / (float)ScreenConfig::VIRTUAL_WIDTH,
+                               (float)renderH / (float)ScreenConfig::VIRTUAL_HEIGHT);
         
         Rectangle srcRec = { 0.0f, 0.0f, (float)ScreenConfig::VIRTUAL_WIDTH, -(float)ScreenConfig::VIRTUAL_HEIGHT };
         Rectangle dstRec = {
-            ((float)currentW - ((float)ScreenConfig::VIRTUAL_WIDTH * scale)) * 0.5f,
-            ((float)currentH - ((float)ScreenConfig::VIRTUAL_HEIGHT * scale)) * 0.5f,
+            ((float)renderW - ((float)ScreenConfig::VIRTUAL_WIDTH * scale)) * 0.5f,
+            ((float)renderH - ((float)ScreenConfig::VIRTUAL_HEIGHT * scale)) * 0.5f,
             (float)ScreenConfig::VIRTUAL_WIDTH * scale,
             (float)ScreenConfig::VIRTUAL_HEIGHT * scale
         };

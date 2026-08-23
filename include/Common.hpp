@@ -172,7 +172,7 @@ struct ResolutionOption {
 
 class DisplaySettings {
 private:
-    static inline int currentResolutionIndex = 3; // Default to 2560x1440 (QHD)
+    static inline int currentResolutionIndex = 2; // Default to 1920x1080 (FHD) for safety, switchable to QHD
 
 public:
     static const std::vector<ResolutionOption>& GetResolutions() {
@@ -183,6 +183,22 @@ public:
             { 2560, 1440, "2560 x 1440", "QHD (1440p) ★" }
         };
         return resList;
+    }
+
+    static void AutoDetectDefaultResolution() {
+        int monitor = GetCurrentMonitor();
+        int monW = GetMonitorWidth(monitor);
+        int monH = GetMonitorHeight(monitor);
+
+        if (monW >= 2560 && monH >= 1440) {
+            currentResolutionIndex = 3; // QHD
+        } else if (monW >= 1920 && monH >= 1080) {
+            currentResolutionIndex = 2; // FHD
+        } else if (monW >= 1600 && monH >= 900) {
+            currentResolutionIndex = 1; // HD+
+        } else {
+            currentResolutionIndex = 0; // HD
+        }
     }
 
     static int GetCurrentResolutionIndex() {
