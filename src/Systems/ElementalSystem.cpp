@@ -1,125 +1,148 @@
 #include "Systems/ElementalSystem.hpp"
 
-ReactionOutcome ElementalSystem::EvaluateReaction(Element baseElement, Element incomingElement, float weatherModifier) {
-    ReactionOutcome outcome;
-    outcome.triggered = false;
+ReactionResult ElementalSystem::EvaluateReactionPair(Element baseElement, Element incomingElement, float weatherModifier) {
+    ReactionResult result;
+    result.triggered = false;
+    result.type = ReactionType::NONE;
+    result.damageMultiplier = 1.0f;
 
     if (baseElement == Element::NONE || incomingElement == Element::NONE) {
-        return outcome;
+        return result;
     }
 
-    // Reaction 1: WET + LIGHTNING -> SHOCK (Chain AoE burst)
+    // Reaction 1: WET + LIGHTNING = SHOCK (Chain AoE + Burst)
     if ((baseElement == Element::WET && incomingElement == Element::LIGHTNING) ||
         (baseElement == Element::LIGHTNING && incomingElement == Element::WET)) {
-        outcome.triggered = true;
-        outcome.reactionName = "SHOCK";
-        outcome.description = "Electrified water conducts high-voltage arcs across all enemies!";
-        outcome.reactionColor = (Color){ 241, 196, 15, 255 }; // Electric Gold
-        outcome.bonusDamage = static_cast<int>(18 * weatherModifier);
-        outcome.chainAoE = true;
-        outcome.aoeDamage = static_cast<int>(12 * weatherModifier);
-        return outcome;
+        result.triggered = true;
+        result.type = ReactionType::SHOCK;
+        result.name = "SHOCK";
+        result.description = "Electrified water conducts high-voltage arcs across all enemies!";
+        result.bonusDamage = static_cast<int>(18 * weatherModifier);
+        result.damageMultiplier = 1.25f;
+        result.consumedElements = Element::WET | Element::LIGHTNING;
+        result.chainAoE = true;
+        result.aoeDamage = static_cast<int>(12 * weatherModifier);
+        return result;
     }
 
-    // Reaction 2: OIL + FIRE -> EXPLOSION (Cataclysmic burst + Burn DoT)
+    // Reaction 2: OIL + FIRE = EXPLOSION (Cataclysmic burst + Burning DoT)
     if ((baseElement == Element::OIL && incomingElement == Element::FIRE) ||
         (baseElement == Element::FIRE && incomingElement == Element::OIL)) {
-        outcome.triggered = true;
-        outcome.reactionName = "EXPLOSION";
-        outcome.description = "Volatile chemical reaction detonates in a massive burst!";
-        outcome.reactionColor = (Color){ 231, 76, 60, 255 }; // Fire Red
-        outcome.bonusDamage = static_cast<int>(22 * weatherModifier);
-        outcome.applyBurn = true;
-        outcome.burnDuration = 3;
-        return outcome;
+        result.triggered = true;
+        result.type = ReactionType::EXPLOSION;
+        result.name = "EXPLOSION";
+        result.description = "Volatile chemical reaction detonates in a massive burst and ignites target!";
+        result.bonusDamage = static_cast<int>(22 * weatherModifier);
+        result.damageMultiplier = 1.40f;
+        result.consumedElements = Element::OIL;
+        result.appliedElements = Element::FIRE;
+        result.appliedDuration = 3;
+        return result;
     }
 
-    // Reaction 3: WET + COLD -> FROZEN (Stun target for 1 turn)
+    // Reaction 3: WET + COLD = FROZEN (1 Turn Immobilization)
     if ((baseElement == Element::WET && incomingElement == Element::COLD) ||
         (baseElement == Element::COLD && incomingElement == Element::WET)) {
-        outcome.triggered = true;
-        outcome.reactionName = "FROZEN";
-        outcome.description = "Target is encased in solid ice and skips their next action!";
-        outcome.reactionColor = (Color){ 162, 222, 255, 255 }; // Ice Cyan
-        outcome.bonusDamage = static_cast<int>(10 * weatherModifier);
-        outcome.stunTarget = true;
-        return outcome;
+        result.triggered = true;
+        result.type = ReactionType::FROZEN;
+        result.name = "FROZEN";
+        result.description = "Target is encased in solid ice and skips their next action!";
+        result.bonusDamage = static_cast<int>(10 * weatherModifier);
+        result.damageMultiplier = 1.10f;
+        result.consumedElements = Element::WET | Element::COLD;
+        result.stunTarget = true;
+        return result;
     }
 
-    // Reaction 4: FIRE + COLD -> MELT / STEAM (Vaporization bonus damage)
+    // Reaction 4: FIRE + COLD = MELT / STEAM (Vaporization Bonus Damage)
     if ((baseElement == Element::FIRE && incomingElement == Element::COLD) ||
         (baseElement == Element::COLD && incomingElement == Element::FIRE)) {
-        outcome.triggered = true;
-        outcome.reactionName = "MELT";
-        outcome.description = "Superheated steam blast vaporizes defenses!";
-        outcome.reactionColor = (Color){ 243, 156, 18, 255 }; // Amber Orange
-        outcome.bonusDamage = static_cast<int>(15 * weatherModifier);
-        return outcome;
+        result.triggered = true;
+        result.type = ReactionType::MELT;
+        result.name = "MELT";
+        result.description = "Superheated steam blast vaporizes defenses!";
+        result.bonusDamage = static_cast<int>(15 * weatherModifier);
+        result.damageMultiplier = 1.30f;
+        result.consumedElements = Element::FIRE | Element::COLD;
+        return result;
     }
 
-    // Reaction 5: OIL + LIGHTNING -> PLASMA (Piercing electric strike)
+    // Reaction 5: OIL + LIGHTNING = PLASMA (Armor-Piercing Electric Discharge)
     if ((baseElement == Element::OIL && incomingElement == Element::LIGHTNING) ||
         (baseElement == Element::LIGHTNING && incomingElement == Element::OIL)) {
-        outcome.triggered = true;
-        outcome.reactionName = "PLASMA";
-        outcome.description = "High-energy plasma discharge pierces defenses!";
-        outcome.reactionColor = (Color){ 155, 89, 182, 255 }; // Arcane Purple
-        outcome.bonusDamage = static_cast<int>(16 * weatherModifier);
-        return outcome;
+        result.triggered = true;
+        result.type = ReactionType::PLASMA;
+        result.name = "PLASMA";
+        result.description = "High-energy plasma discharge pierces defenses!";
+        result.bonusDamage = static_cast<int>(16 * weatherModifier);
+        result.damageMultiplier = 1.20f;
+        result.consumedElements = Element::OIL | Element::LIGHTNING;
+        return result;
     }
 
-    return outcome;
+    return result;
 }
 
-std::vector<Element> ElementalSystem::GetSpreadElements(const std::vector<StatusInstance>& currentStatuses) {
-    std::vector<Element> spreadList;
-    for (const auto& status : currentStatuses) {
-        if (status.element != Element::NONE && status.duration > 0) {
-            spreadList.push_back(status.element);
+ReactionResult ElementalSystem::ResolveReaction(Element currentStatusMask, Element incomingElement, float weatherModifier) {
+    ReactionResult finalResult;
+    finalResult.triggered = false;
+    finalResult.damageMultiplier = 1.0f;
+
+    if (currentStatusMask == Element::NONE || incomingElement == Element::NONE) {
+        return finalResult;
+    }
+
+    // Test each active bit in the mask against incomingElement
+    static const Element testElements[] = {
+        Element::WET, Element::FIRE, Element::OIL, Element::LIGHTNING, Element::COLD, Element::GALE
+    };
+
+    for (Element base : testElements) {
+        if (HasFlag(currentStatusMask, base)) {
+            ReactionResult res = EvaluateReactionPair(base, incomingElement, weatherModifier);
+            if (res.triggered) {
+                return res;
+            }
         }
     }
-    return spreadList;
+
+    return finalResult;
+}
+
+std::vector<Element> ElementalSystem::GetActiveElementsFromMask(Element mask) {
+    std::vector<Element> list;
+    static const Element testElements[] = {
+        Element::WET, Element::FIRE, Element::OIL, Element::LIGHTNING, Element::COLD, Element::GALE
+    };
+    for (Element elem : testElements) {
+        if (HasFlag(mask, elem)) {
+            list.push_back(elem);
+        }
+    }
+    return list;
 }
 
 const char* ElementalSystem::GetElementName(Element elem) {
-    switch (elem) {
-        case Element::WET:       return "Wet";
-        case Element::FIRE:      return "Fire";
-        case Element::LIGHTNING: return "Lightning";
-        case Element::COLD:      return "Cold";
-        case Element::OIL:       return "Oil";
-        case Element::GALE:      return "Gale";
-        case Element::NONE:
-        default:                 return "None";
-    }
+    return GetElementNameStr(elem);
 }
 
 const char* ElementalSystem::GetElementIcon(Element elem) {
-    switch (elem) {
-        case Element::WET:       return "💧 WET";
-        case Element::FIRE:      return "🔥 FIRE";
-        case Element::LIGHTNING: return "⚡ ELEC";
-        case Element::COLD:      return "❄️ COLD";
-        case Element::OIL:       return "🛢️ OIL";
-        case Element::GALE:      return "🌪️ GALE";
-        case Element::NONE:
-        default:                 return "⚪ NONE";
-    }
+    return GetElementSymbolStr(elem);
 }
 
 const char* ElementalSystem::GetElementShortDesc(Element elem) {
     switch (elem) {
-        case Element::WET:       return "Conducts electricity & freezes easily";
-        case Element::FIRE:      return "Deals 6 DoT per turn & burns oil";
-        case Element::LIGHTNING: return "Arcs across wet targets";
-        case Element::COLD:      return "Slows down and solidifies wet targets";
-        case Element::OIL:       return "Highly combustible fuel source";
-        case Element::GALE:      return "Disperses statuses to adjacent targets";
+        case Element::WET:       return "Conducts electricity (SHOCK) & freezes (FROZEN)";
+        case Element::FIRE:      return "Deals 6 DoT per turn & ignites OIL (EXPLOSION)";
+        case Element::LIGHTNING: return "Arcs across WET targets causing SHOCK AoE";
+        case Element::COLD:      return "Solidifies WET targets into FROZEN stun";
+        case Element::OIL:       return "Highly combustible fuel; triggers EXPLOSION on FIRE";
+        case Element::GALE:      return "Disperses statuses to adjacent combatants";
         case Element::NONE:
         default:                 return "No effect";
     }
 }
 
-Color ElementalSystem::GetElementColor(Element elem) {
-    return GetElementBaseColor(elem);
+ColorRGBA ElementalSystem::GetElementColor(Element elem) {
+    return GetElementColorRGBA(elem);
 }

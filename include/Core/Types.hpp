@@ -1,43 +1,93 @@
 #pragma once
 
-#include "raylib.h"
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <deque>
 #include <memory>
-#include <functional>
 #include <algorithm>
-#include <cmath>
 #include <iostream>
+#include <sstream>
+#include <unordered_map>
 
-// ==========================================
+// ============================================================================
+// A. Element Bitflags & Bitwise Operators (Pure C++17, Zero Engine Dependency)
+// ============================================================================
+
+enum class Element : uint32_t {
+    NONE        = 0,
+    WET         = 1 << 0,   // 1  (Water / Moisture)
+    FIRE        = 1 << 1,   // 2  (Combustion / Heat)
+    OIL         = 1 << 2,   // 4  (Flammable Sludge / Chemical)
+    LIGHTNING   = 1 << 3,   // 8  (Electricity / Shock)
+    COLD        = 1 << 4,   // 16 (Ice / Frost)
+    GALE        = 1 << 5    // 32 (Wind / Dispersal)
+};
+
+// Bitwise Operator Overloads for Element Bitflags
+inline constexpr Element operator|(Element lhs, Element rhs) {
+    return static_cast<Element>(static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));
+}
+
+inline constexpr Element operator&(Element lhs, Element rhs) {
+    return static_cast<Element>(static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs));
+}
+
+inline constexpr Element operator^(Element lhs, Element rhs) {
+    return static_cast<Element>(static_cast<uint32_t>(lhs) ^ static_cast<uint32_t>(rhs));
+}
+
+inline constexpr Element operator~(Element elem) {
+    return static_cast<Element>(~static_cast<uint32_t>(elem));
+}
+
+inline Element& operator|=(Element& lhs, Element rhs) {
+    lhs = lhs | rhs;
+    return lhs;
+}
+
+inline Element& operator&=(Element& lhs, Element rhs) {
+    lhs = lhs & rhs;
+    return lhs;
+}
+
+inline Element& operator^=(Element& lhs, Element rhs) {
+    lhs = lhs ^ rhs;
+    return lhs;
+}
+
+inline bool HasFlag(Element mask, Element flag) {
+    return (static_cast<uint32_t>(mask) & static_cast<uint32_t>(flag)) == static_cast<uint32_t>(flag);
+}
+
+// ============================================================================
 // Core Enums
-// ==========================================
+// ============================================================================
 
-enum class Element {
+enum class ReactionType {
     NONE = 0,
-    WET,        // Water / Moisture
-    FIRE,       // Burning / Heat
-    LIGHTNING,  // Shock / Electricity
-    COLD,       // Ice / Frost
-    OIL,        // Flammable liquid / Fuel
-    GALE        // Wind / Dispersal
+    SHOCK,      // WET + LIGHTNING -> High Voltage Chain AoE + Burst
+    EXPLOSION,  // OIL + FIRE -> Cataclysmic Burst + Burning DoT
+    FROZEN,     // WET + COLD -> Immobilization (Skip 1 Turn)
+    MELT,       // FIRE + COLD -> Superheated Steam Vaporization Bonus
+    PLASMA,     // OIL + LIGHTNING -> Armor-Piercing Discharge
+    SPREAD      // GALE + ANY -> Spreads Debuffs to Neighbors
 };
 
 enum class WeatherType {
-    CLEAR = 0,      // Normal conditions
-    RAIN,           // Applies WET to all combatants every turn; boosts water
-    HEATWAVE,       // Amplifies FIRE dmg +50%; applies Burn/Fire
-    THUNDERSTORM,   // Heavy rain (WET) + random LIGHTNING strikes (15 dmg)
-    BLIZZARD,       // Applies COLD; freezes WET entities; boosts cold dmg +30%
-    GALE_WINDS,     // Spreads active debuffs to nearby entities; evasion up
-    ACID_RAIN       // Applies OIL & shreds defense/shield
+    CLEAR = 0,      // Normal atmospheric baseline
+    RAIN,           // Applies WET globally; amplifies Water damage
+    HEATWAVE,       // Amplifies FIRE damage (+50%); applies Burning
+    THUNDERSTORM,   // Heavy rain (WET) + random lightning bolts (15 dmg)
+    BLIZZARD,       // Applies COLD; flash-freezes WET targets; Cold dmg +30%
+    GALE_WINDS,     // Swirls and spreads debuffs to adjacent targets
+    ACID_RAIN       // Drenches all units in combustible OIL
 };
 
 enum class StanceType {
-    ATTACK = 0,     // +40% Outgoing Damage, +1 status stack buildup
-    DEFENSE,        // +18 Shield, -30% Incoming Damage
-    PARRY           // 50% Dmg reduction; reflects incoming statuses & deals counter damage
+    ATTACK = 0,     // +40% Outgoing DMG
+    DEFENSE,        // +18 Shield, -30% Incoming DMG
+    PARRY           // -50% Incoming DMG, reflects debuffs & counters
 };
 
 enum class TargetType {
@@ -56,13 +106,13 @@ enum class IntentType {
 };
 
 enum class CombatPhase {
-    PLAYER_INPUT = 0,               // Waiting for player skill/stance selection
-    RESOLVE_PLAYER_ACTION,          // Step 1: Resolve Player Action & Elemental Reactions
-    RESOLVE_ENEMY_ACTIONS,          // Step 2: Resolve Enemy AI Action & Reactions
-    TICK_STATUS_EFFECTS,            // Step 3: Tick Status Effects / Buffs / Debuffs on all Entities
-    TICK_COOLDOWNS,                 // Step 4: Tick Player & Enemy Skill Cooldowns
-    ADVANCE_WEATHER_AND_APPLY,      // Step 5: Advance Weather Forecast Queue & Apply Environmental Effect
-    RESET_TURN_AND_START_NEXT,      // Step 6: Reset Stances / Action Points and start Next Turn
+    PLAYER_INPUT = 0,               // Waiting for player skill/stance choice
+    RESOLVE_PLAYER_ACTION,          // Step 1: Resolve player action & elemental reactions
+    RESOLVE_ENEMY_ACTIONS,          // Step 2: Resolve enemy AI action & reactions
+    TICK_STATUS_EFFECTS,            // Step 3: Tick status effects & DoT damage
+    TICK_COOLDOWNS,                 // Step 4: Tick player skill cooldowns (-1 Turn)
+    ADVANCE_WEATHER_AND_APPLY,      // Step 5: Advance 3-turn forecast queue & apply weather effect
+    RESET_TURN_AND_START_NEXT,      // Step 6: Reset turn states and start next round
     VICTORY_SCREEN,                 // Wave cleared
     DEFEAT_SCREEN                   // Player defeated
 };
@@ -80,14 +130,14 @@ enum class AppState {
 
 using GameScene = AppState;
 
-// ==========================================
-// Core Data Structs
-// ==========================================
+// ============================================================================
+// Core Structs
+// ============================================================================
 
 struct StatusInstance {
     Element element;
     int duration;   // Turns remaining
-    int stacks;     // Number of stacks (if applicable)
+    int stacks;     // Number of stacks
 
     StatusInstance(Element elem = Element::NONE, int dur = 2, int stk = 1)
         : element(elem), duration(dur), stacks(stk) {}
@@ -95,24 +145,30 @@ struct StatusInstance {
 
 struct Intent {
     IntentType type = IntentType::ATTACK;
-    int value = 0;              // Damage or shield value
+    int value = 0;              // Damage, shield, or heal amount
     Element element = Element::NONE;
     std::string name = "Attack";
     std::string desc = "Deals damage";
 };
 
-struct ReactionOutcome {
+// Return structure for Elemental Reactions
+struct ReactionResult {
     bool triggered = false;
-    std::string reactionName = "";
+    ReactionType type = ReactionType::NONE;
+    std::string name = "";
     std::string description = "";
-    Color reactionColor = WHITE;
     int bonusDamage = 0;
+    float damageMultiplier = 1.0f;
+    Element consumedElements = Element::NONE; // Elements consumed by reaction
+    Element appliedElements = Element::NONE;  // New element inflicted (e.g., Burn from Explosion)
+    int appliedDuration = 0;
     bool chainAoE = false;
     int aoeDamage = 0;
-    bool stunTarget = false;
-    bool applyBurn = false;
-    int burnDuration = 0;
+    bool stunTarget = false;                  // E.g., Frozen
+    bool isParried = false;
 };
+
+using ReactionOutcome = ReactionResult;
 
 struct DamageReport {
     int rawDamage = 0;
@@ -123,24 +179,36 @@ struct DamageReport {
     bool wasShielded = false;
     bool wasCritical = false;
     bool causedDeath = false;
-    ReactionOutcome reaction;
+    ReactionResult reaction;
+};
+
+struct Vec2 {
+    float x = 0.0f;
+    float y = 0.0f;
+};
+
+struct ColorRGBA {
+    uint8_t r = 255;
+    uint8_t g = 255;
+    uint8_t b = 255;
+    uint8_t a = 255;
 };
 
 struct FloatingText {
-    Vector2 position;
-    Vector2 velocity;
+    Vec2 position;
+    Vec2 velocity;
     std::string text;
-    Color color;
-    float lifetime;
-    float maxLifetime;
-    float fontSize;
-    float alpha;
+    ColorRGBA color;
+    float lifetime = 1.2f;
+    float maxLifetime = 1.2f;
+    float fontSize = 20.0f;
+    float alpha = 1.0f;
 };
 
 struct CombatLogEntry {
     std::string text;
-    Color color;
-    float timestamp;
+    ColorRGBA color;
+    float timestamp = 0.0f;
 };
 
 struct WeatherTriggerResult {
@@ -157,40 +225,53 @@ struct WeatherTriggerResult {
     float waterDamageModifier = 1.0f;
     float lightningDamageModifier = 1.0f;
     float coldDamageModifier = 1.0f;
-    Color weatherColor = WHITE;
+    ColorRGBA weatherColor = { 255, 255, 255, 255 };
 };
 
-// ==========================================
-// Element & Weather Color/Text Helpers
-// ==========================================
+// ============================================================================
+// Helper Utilities
+// ============================================================================
 
-inline Color GetElementBaseColor(Element elem) {
+inline const char* GetElementNameStr(Element elem) {
     switch (elem) {
-        case Element::WET:       return (Color){ 52, 152, 219, 255 };  // Bright Blue
-        case Element::FIRE:      return (Color){ 231, 76, 60, 255 };   // Vibrant Red-Orange
-        case Element::LIGHTNING: return (Color){ 241, 196, 15, 255 };  // Electric Gold
-        case Element::COLD:      return (Color){ 162, 222, 255, 255 }; // Cyan-Ice
-        case Element::OIL:       return (Color){ 108, 92, 231, 255 };  // Deep Violet / Sludge
-        case Element::GALE:      return (Color){ 46, 204, 113, 255 };  // Emerald Green
+        case Element::WET:       return "Wet";
+        case Element::FIRE:      return "Fire";
+        case Element::OIL:       return "Oil";
+        case Element::LIGHTNING: return "Lightning";
+        case Element::COLD:      return "Cold";
+        case Element::GALE:      return "Gale";
         case Element::NONE:
-        default:                 return (Color){ 189, 195, 199, 255 }; // Light Gray
+        default:                 return "None";
     }
 }
 
-inline const char* GetElementSymbol(Element elem) {
+inline const char* GetElementSymbolStr(Element elem) {
     switch (elem) {
-        case Element::WET:       return "[WET]";
-        case Element::FIRE:      return "[FIRE]";
-        case Element::LIGHTNING: return "[ELEC]";
-        case Element::COLD:      return "[COLD]";
-        case Element::OIL:       return "[OIL]";
-        case Element::GALE:      return "[WIND]";
+        case Element::WET:       return "💧 WET";
+        case Element::FIRE:      return "🔥 FIRE";
+        case Element::OIL:       return "🛢️ OIL";
+        case Element::LIGHTNING: return "⚡ LIGHTNING";
+        case Element::COLD:      return "❄️ COLD";
+        case Element::GALE:      return "🌪️ GALE";
         case Element::NONE:
-        default:                 return "[-]";
+        default:                 return "⚪ NONE";
     }
 }
 
-inline const char* GetWeatherTitle(WeatherType w) {
+inline ColorRGBA GetElementColorRGBA(Element elem) {
+    switch (elem) {
+        case Element::WET:       return { 52, 152, 219, 255 };  // Bright Blue
+        case Element::FIRE:      return { 231, 76, 60, 255 };   // Flame Red
+        case Element::OIL:       return { 108, 92, 231, 255 };  // Sludge Purple
+        case Element::LIGHTNING: return { 241, 196, 15, 255 };  // Electric Gold
+        case Element::COLD:      return { 162, 222, 255, 255 }; // Ice Cyan
+        case Element::GALE:      return { 46, 204, 113, 255 };  // Emerald Green
+        case Element::NONE:
+        default:                 return { 189, 195, 199, 255 }; // Silver Gray
+    }
+}
+
+inline const char* GetWeatherTitleStr(WeatherType w) {
     switch (w) {
         case WeatherType::CLEAR:        return "Clear Sky";
         case WeatherType::RAIN:         return "Downpour Rain";

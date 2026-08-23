@@ -5,14 +5,10 @@
 
 class Player : public Entity {
 private:
-    StanceType stance;
     SkillSystem skillSystem;
 
 public:
     Player(const std::string& playerName = "Arcane Duelist", int maxHealth = 100);
-
-    void SetStance(StanceType newStance) { stance = newStance; }
-    StanceType GetStance() const { return stance; }
 
     SkillSystem& GetSkillSystem() { return skillSystem; }
     const SkillSystem& GetSkillSystem() const { return skillSystem; }

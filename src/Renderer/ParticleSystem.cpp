@@ -21,7 +21,7 @@ void ParticleSystem::TriggerScreenFlash(float duration) {
 }
 
 void ParticleSystem::AddFloatingText(Vector2 pos, const std::string& text, Color color, float fontSize, float lifetime) {
-    FloatingText ft;
+    ParticleFloatingText ft;
     ft.position = (Vector2){ pos.x + RandomFloat(-25.0f, 25.0f), pos.y - 15.0f };
     ft.velocity = (Vector2){ RandomFloat(-20.0f, 20.0f), RandomFloat(-80.0f, -60.0f) };
     ft.text = text;
@@ -52,7 +52,7 @@ void ParticleSystem::SpawnReactionBurst(Vector2 pos, const std::string& reaction
 }
 
 void ParticleSystem::SpawnHitSparks(Vector2 pos, Element elem, int count) {
-    Color col = GetElementBaseColor(elem);
+    Color col = ToRaylibColor(GetElementColorRGBA(elem));
     for (int i = 0; i < count * 2; ++i) {
         Particle p;
         p.position = pos;

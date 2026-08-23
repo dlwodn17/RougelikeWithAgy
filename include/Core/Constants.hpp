@@ -1,6 +1,16 @@
 #pragma once
 
 #include "Core/Types.hpp"
+#include "raylib.h"
+
+inline Color ToRaylibColor(ColorRGBA c) {
+    return (Color){ c.r, c.g, c.b, c.a };
+}
+
+inline Vector2 ToRaylibVector2(Vec2 v) {
+    return (Vector2){ v.x, v.y };
+}
+
 
 // ==========================================
 // Virtual High-Res (2560x1440) Layout Metrics

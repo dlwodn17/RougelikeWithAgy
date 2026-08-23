@@ -110,7 +110,7 @@ WeatherTriggerResult WeatherSystem::ProcessTurnStartWeather() {
 }
 
 const char* WeatherSystem::GetWeatherName(WeatherType weather) {
-    return GetWeatherTitle(weather);
+    return GetWeatherTitleStr(weather);
 }
 
 const char* WeatherSystem::GetWeatherIcon(WeatherType weather) {
@@ -159,15 +159,15 @@ std::string WeatherSystem::GetWeatherDetailedDesc(WeatherType weather) {
     }
 }
 
-Color WeatherSystem::GetWeatherColor(WeatherType weather) {
+ColorRGBA WeatherSystem::GetWeatherColor(WeatherType weather) {
     switch (weather) {
-        case WeatherType::RAIN:         return (Color){ 52, 152, 219, 255 };  // Blue
-        case WeatherType::HEATWAVE:     return (Color){ 230, 126, 34, 255 };  // Orange
-        case WeatherType::THUNDERSTORM: return (Color){ 142, 68, 173, 255 };  // Purple
-        case WeatherType::BLIZZARD:     return (Color){ 129, 236, 236, 255 }; // Ice Cyan
-        case WeatherType::GALE_WINDS:   return (Color){ 46, 204, 113, 255 };  // Green
-        case WeatherType::ACID_RAIN:    return (Color){ 108, 92, 231, 255 };  // Violet
+        case WeatherType::RAIN:         return { 52, 152, 219, 255 };  // Blue
+        case WeatherType::HEATWAVE:     return { 230, 126, 34, 255 };  // Orange
+        case WeatherType::THUNDERSTORM: return { 142, 68, 173, 255 };  // Purple
+        case WeatherType::BLIZZARD:     return { 129, 236, 236, 255 }; // Ice Cyan
+        case WeatherType::GALE_WINDS:   return { 46, 204, 113, 255 };  // Green
+        case WeatherType::ACID_RAIN:    return { 108, 92, 231, 255 };  // Violet
         case WeatherType::CLEAR:
-        default:                        return (Color){ 241, 196, 15, 255 };  // Gold
+        default:                        return { 241, 196, 15, 255 };  // Gold
     }
 }

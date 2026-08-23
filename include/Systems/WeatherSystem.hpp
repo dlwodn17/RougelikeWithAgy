@@ -27,5 +27,5 @@ public:
     static const char* GetWeatherIcon(WeatherType weather);
     static const char* GetWeatherShortDesc(WeatherType weather);
     static std::string GetWeatherDetailedDesc(WeatherType weather);
-    static Color GetWeatherColor(WeatherType weather);
+    static ColorRGBA GetWeatherColor(WeatherType weather);
 };

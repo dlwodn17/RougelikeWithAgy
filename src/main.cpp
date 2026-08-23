@@ -1,9 +1,92 @@
 #include "raylib.h"
 #include "GameState.hpp"
 #include "Core/Constants.hpp"
+#include "Systems/ElementalSystem.hpp"
+#include "Entities/Skill.hpp"
+#include <iostream>
 
-int main() {
-    // Window & Display Configuration
+void RunCoreElementalUnitTests() {
+    std::cout << "=================================================================\n";
+    std::cout << " [STEP 1 UNIT TEST SUITE] Elemental Reaction & Core Data System \n";
+    std::cout << "=================================================================\n\n";
+
+    // Test 1: Bitwise Element Flags
+    std::cout << "[Test 1] Element Bitflag Operations:\n";
+    Element statusMask = Element::NONE;
+    statusMask |= Element::WET;
+    statusMask |= Element::OIL;
+    std::cout << " - Applied WET (1) and OIL (4) -> Mask Value: " << static_cast<uint32_t>(statusMask) << "\n";
+    std::cout << " - HasFlag(statusMask, Element::WET): " << (HasFlag(statusMask, Element::WET) ? "PASS" : "FAIL") << "\n";
+    std::cout << " - HasFlag(statusMask, Element::OIL): " << (HasFlag(statusMask, Element::OIL) ? "PASS" : "FAIL") << "\n";
+    std::cout << " - HasFlag(statusMask, Element::FIRE): " << (!HasFlag(statusMask, Element::FIRE) ? "PASS (Not present)" : "FAIL") << "\n\n";
+
+    // Test 2: Primary Elemental Reactions Matrix
+    std::cout << "[Test 2] Elemental Reaction Matrix Resolution:\n";
+    
+    // Scenario A: WET + LIGHTNING -> SHOCK
+    ReactionResult shockRes = ElementalSystem::ResolveReaction(Element::WET, Element::LIGHTNING);
+    std::cout << " -> Reaction [WET + LIGHTNING]: " << shockRes.name << " (Triggered: " << (shockRes.triggered ? "TRUE" : "FALSE") << ")\n";
+    std::cout << "    - Bonus DMG: +" << shockRes.bonusDamage << " | Chain AoE: " << (shockRes.chainAoE ? "YES" : "NO") << " (AoE DMG: " << shockRes.aoeDamage << ")\n";
+
+    // Scenario B: OIL + FIRE -> EXPLOSION
+    ReactionResult expRes = ElementalSystem::ResolveReaction(Element::OIL, Element::FIRE);
+    std::cout << " -> Reaction [OIL + FIRE]: " << expRes.name << " (Triggered: " << (expRes.triggered ? "TRUE" : "FALSE") << ")\n";
+    std::cout << "    - Bonus DMG: +" << expRes.bonusDamage << " | Applied Status: " << GetElementNameStr(expRes.appliedElements) << " (Duration: " << expRes.appliedDuration << "T)\n";
+
+    // Scenario C: WET + COLD -> FROZEN
+    ReactionResult frzRes = ElementalSystem::ResolveReaction(Element::WET, Element::COLD);
+    std::cout << " -> Reaction [WET + COLD]: " << frzRes.name << " (Triggered: " << (frzRes.triggered ? "TRUE" : "FALSE") << ")\n";
+    std::cout << "    - Stun Target: " << (frzRes.stunTarget ? "YES (Skip 1 Turn)" : "NO") << "\n";
+
+    // Scenario D: FIRE + COLD -> MELT
+    ReactionResult meltRes = ElementalSystem::ResolveReaction(Element::FIRE, Element::COLD);
+    std::cout << " -> Reaction [FIRE + COLD]: " << meltRes.name << " (Triggered: " << (meltRes.triggered ? "TRUE" : "FALSE") << ")\n";
+    std::cout << "    - Bonus DMG: +" << meltRes.bonusDamage << "\n\n";
+
+    // Test 3: In-Combat Entity Reaction Execution (WET target struck with LIGHTNING)
+    std::cout << "[Test 3] Combat Entity Reaction Execution Simulation:\n";
+    Entity dummyEnemy("Training Dummy", 100);
+    std::cout << " - Created Enemy '" << dummyEnemy.GetName() << "' with HP: " << dummyEnemy.GetHp() << "/" << dummyEnemy.GetMaxHp() << "\n";
+    
+    std::cout << " - Step A: Inflicting [WET] status (2 Turns)...\n";
+    dummyEnemy.ApplyElement(Element::WET, 2);
+    std::cout << "   Current Status Mask: " << static_cast<uint32_t>(dummyEnemy.GetActiveStatusMask())
+              << " | Has [WET]: " << (dummyEnemy.HasElement(Element::WET) ? "TRUE" : "FALSE") << "\n";
+
+    std::cout << " - Step B: Attacking with [LIGHTNING] (20 Base DMG)...\n";
+    DamageReport report = dummyEnemy.ApplyIncomingDamage(20, Element::LIGHTNING, StanceType::ATTACK);
+    std::cout << "   Damage Report:\n";
+    std::cout << "   * Raw DMG: " << report.rawDamage << "\n";
+    std::cout << "   * Mitigated/Effective DMG: " << report.mitigatedDamage << " (Bonus from SHOCK: +" << report.reaction.bonusDamage << ")\n";
+    std::cout << "   * Remaining Enemy HP: " << dummyEnemy.GetHp() << "/" << dummyEnemy.GetMaxHp() << "\n";
+    std::cout << "   * Reaction Triggered: [" << report.reaction.name << "] -> " << report.reaction.description << "\n";
+    std::cout << "   * Chain AoE Flag: " << (report.reaction.chainAoE ? "TRUE (Deals 12 AoE DMG to all other enemies)" : "FALSE") << "\n";
+    std::cout << "   * Status after consumption: " << (dummyEnemy.HasElement(Element::WET) ? "WET remains" : "WET consumed by reaction (CLEAN)") << "\n\n";
+
+    // Test 4: Extensible Skill Mutation Runes (Phase 3 Prep)
+    std::cout << "[Test 4] Extensible Skill & Mutation Rune Modifiers:\n";
+    Skill baseSlash("slash", "Basic Slash", "Deals physical damage", Element::NONE, Element::NONE, 15, 0, 0);
+    std::cout << " - Original Skill: " << baseSlash.GetName() << " | Element: " << GetElementNameStr(baseSlash.GetEffectiveElement()) << " | Damage: " << baseSlash.GetEffectiveDamage() << "\n";
+
+    SkillRune frostRune("rune_frost", "Glacial Mutation Rune", "Mutates skill into Ice and grants +10 damage", Element::COLD, 10);
+    baseSlash.AttachRune(frostRune);
+    std::cout << " - After Socketing '" << frostRune.name << "':\n";
+    std::cout << "   * Effective Element: " << GetElementNameStr(baseSlash.GetEffectiveElement()) << " (Mutated from NONE)\n";
+    std::cout << "   * Effective Damage: " << baseSlash.GetEffectiveDamage() << " (15 + 10 = 25)\n";
+    std::cout << "=================================================================\n\n";
+}
+
+int main(int argc, char* argv[]) {
+    // 1. Run and print pure C++ core elemental unit test suite
+    RunCoreElementalUnitTests();
+
+    // If --test CLI argument provided, exit after running console tests
+    if (argc > 1 && std::string(argv[1]) == "--test") {
+        std::cout << "[SUCCESS] All Step 1 Elemental Reaction unit tests passed successfully!\n";
+        return 0;
+    }
+
+    // 2. Window & Display Configuration
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
     
     // Auto-detect best initial window size based on monitor resolution

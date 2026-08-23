@@ -56,7 +56,7 @@ void CombatRenderer::DrawStatusBadges(const std::vector<StatusInstance>& statuse
     for (const auto& st : statuses) {
         if (st.element == Element::NONE || st.duration <= 0) continue;
 
-        Color col = ElementalSystem::GetElementColor(st.element);
+        Color col = ToRaylibColor(ElementalSystem::GetElementColor(st.element));
         std::string badgeText = std::string(ElementalSystem::GetElementIcon(st.element)) + " (" + std::to_string(st.duration) + "T)";
         int fontSize = 18;
         int tw = MeasureText(badgeText.c_str(), fontSize);
@@ -112,7 +112,7 @@ void CombatRenderer::DrawWeatherForecast(const WeatherSystem& weatherSystem) {
 
     WeatherType current = weatherSystem.GetCurrentWeather();
     Rectangle slot0Rec = { 380, 30, 480, 90 };
-    Color curColor = WeatherSystem::GetWeatherColor(current);
+    Color curColor = ToRaylibColor(WeatherSystem::GetWeatherColor(current));
     DrawCard(slot0Rec, (Color){ 30, 38, 55, 255 }, curColor, 0.12f);
 
     std::string activeTitle = "ACTIVE: " + std::string(WeatherSystem::GetWeatherIcon(current));
@@ -127,7 +127,7 @@ void CombatRenderer::DrawWeatherForecast(const WeatherSystem& weatherSystem) {
         DrawCard(nextRec, (Color){ 25, 30, 42, 200 }, (Color){ 60, 70, 90, 200 }, 0.10f);
 
         std::string turnLabel = "+" + std::to_string(i + 1) + " Turn: " + WeatherSystem::GetWeatherName(nextW);
-        DrawText(turnLabel.c_str(), (int)nextRec.x + 16, 42, 19, WeatherSystem::GetWeatherColor(nextW));
+        DrawText(turnLabel.c_str(), (int)nextRec.x + 16, 42, 19, ToRaylibColor(WeatherSystem::GetWeatherColor(nextW)));
         DrawText(WeatherSystem::GetWeatherShortDesc(nextW), (int)nextRec.x + 16, 74, 15, (Color){ 160, 170, 190, 255 });
     }
 
@@ -144,7 +144,7 @@ void CombatRenderer::DrawWeatherForecast(const WeatherSystem& weatherSystem) {
 }
 
 void CombatRenderer::DrawPlayerPanel(const Player& player, StanceType selectedStance) {
-    Vector2 offset = player.GetRenderOffset();
+    Vec2 offset = player.GetRenderOffset();
     Rectangle cardRec = { GameConstants::PLAYER_CARD_X + offset.x, GameConstants::PLAYER_CARD_Y + offset.y,
                           GameConstants::PLAYER_CARD_W, GameConstants::PLAYER_CARD_H };
 
@@ -176,10 +176,11 @@ void CombatRenderer::DrawPlayerPanel(const Player& player, StanceType selectedSt
     DrawHealthBar((Vector2){ cardRec.x + 30, cardRec.y + 175 }, (Vector2){ 560, 42 }, player.GetHp(), player.GetMaxHp(), player.GetShield(), (Color){ 46, 204, 113, 255 });
 
     DrawText("ACTIVE ELEMENTAL STATUS BUFFER:", (int)cardRec.x + 30, (int)cardRec.y + 245, 18, (Color){ 160, 175, 200, 255 });
-    if (player.GetStatusBuffer().empty()) {
+    auto statusList = player.GetStatusInstances();
+    if (statusList.empty()) {
         DrawText("(Clean - No active elemental debuffs)", (int)cardRec.x + 30, (int)cardRec.y + 280, 18, (Color){ 120, 130, 150, 255 });
     } else {
-        DrawStatusBadges(player.GetStatusBuffer(), (Vector2){ cardRec.x + 30, cardRec.y + 280 });
+        DrawStatusBadges(statusList, (Vector2){ cardRec.x + 30, cardRec.y + 280 });
     }
 
     Rectangle traitRec = { cardRec.x + 25, cardRec.y + 350, 570, 235 };
@@ -215,7 +216,7 @@ void CombatRenderer::DrawEnemyPanel(const CombatSystem& combat) {
         const Enemy& enemy = enemies[i];
         if (!enemy.IsAlive()) continue;
 
-        Vector2 offset = enemy.GetRenderOffset();
+        Vec2 offset = enemy.GetRenderOffset();
         Rectangle rec = { startX + (float)i * (cardWidth + spacing) + offset.x,
                           GameConstants::ENEMY_CARD_Y + offset.y, cardWidth, GameConstants::ENEMY_CARD_H };
 
@@ -231,11 +232,11 @@ void CombatRenderer::DrawEnemyPanel(const CombatSystem& combat) {
             DrawText("▼ ACTIVE TARGET ▼", (int)(rec.x + rec.width * 0.5f - 110), (int)rec.y - 30, 22, (Color){ 241, 196, 15, 255 });
         }
 
-        DrawText(enemy.GetName().c_str(), (int)rec.x + 25, (int)rec.y + 25, 28, enemy.GetColor());
+        DrawText(enemy.GetName().c_str(), (int)rec.x + 25, (int)rec.y + 25, 28, ToRaylibColor(enemy.GetColor()));
 
         const Intent& intent = enemy.GetIntent();
         Rectangle intentRec = { rec.x + 25, rec.y + 70, rec.width - 50, 75 };
-        Color intentBorder = GetElementBaseColor(intent.element);
+        Color intentBorder = ToRaylibColor(ElementalSystem::GetElementColor(intent.element));
         DrawCard(intentRec, (Color){ 18, 20, 30, 230 }, intentBorder, 0.10f);
 
         std::string intentText = "INTENT: " + intent.name;
@@ -251,10 +252,11 @@ void CombatRenderer::DrawEnemyPanel(const CombatSystem& combat) {
         DrawHealthBar((Vector2){ rec.x + 25.0f, rec.y + 190.0f }, (Vector2){ rec.width - 50.0f, 42.0f }, enemy.GetHp(), enemy.GetMaxHp(), enemy.GetShield(), (Color){ 231, 76, 60, 255 });
 
         DrawText("STATUS EFFECT BUFFER:", (int)rec.x + 25, (int)rec.y + 255, 18, (Color){ 160, 175, 200, 255 });
-        if (enemy.GetStatusBuffer().empty()) {
+        auto statusList = enemy.GetStatusInstances();
+        if (statusList.empty()) {
             DrawText("(No active elemental status)", (int)rec.x + 25, (int)rec.y + 290, 18, (Color){ 120, 130, 150, 255 });
         } else {
-            DrawStatusBadges(enemy.GetStatusBuffer(), (Vector2){ rec.x + 25, rec.y + 290 });
+            DrawStatusBadges(statusList, (Vector2){ rec.x + 25, rec.y + 290 });
         }
 
         if (enemy.IsFrozen()) {
@@ -314,20 +316,22 @@ void CombatRenderer::DrawSkillPanel(const CombatSystem& combat) {
 
         DrawCard(rec, bg, border, 0.08f);
 
-        std::string hotkeyTitle = "[" + std::to_string(i + 1) + "] " + skill.name;
-        DrawText(hotkeyTitle.c_str(), (int)rec.x + 18, (int)rec.y + 18, 22, isReady ? skill.themeColor : (Color){ 130, 135, 145, 255 });
+        std::string hotkeyTitle = "[" + std::to_string(i + 1) + "] " + skill.GetName();
+        Color themeCol = ToRaylibColor(skill.GetThemeColor());
+        DrawText(hotkeyTitle.c_str(), (int)rec.x + 18, (int)rec.y + 18, 22, isReady ? themeCol : (Color){ 130, 135, 145, 255 });
 
-        const char* elemName = ElementalSystem::GetElementName(skill.primaryElement);
-        DrawText(elemName, (int)rec.x + 18, (int)rec.y + 55, 18, GetElementBaseColor(skill.primaryElement));
+        Element effElem = skill.GetEffectiveElement();
+        const char* elemName = ElementalSystem::GetElementName(effElem);
+        DrawText(elemName, (int)rec.x + 18, (int)rec.y + 55, 18, ToRaylibColor(ElementalSystem::GetElementColor(effElem)));
 
-        std::string dmgText = std::to_string(skill.baseDamage) + " DMG";
+        std::string dmgText = std::to_string(skill.GetEffectiveDamage()) + " DMG";
         DrawText(dmgText.c_str(), (int)rec.x + (int)rec.width - 110, (int)rec.y + 55, 20, (Color){ 241, 196, 15, 255 });
 
-        DrawText(skill.description.c_str(), (int)rec.x + 18, (int)rec.y + 95, 15, (Color){ 180, 190, 205, 255 });
+        DrawText(skill.GetDescription().c_str(), (int)rec.x + 18, (int)rec.y + 95, 15, (Color){ 180, 190, 205, 255 });
 
         if (!isReady) {
             DrawRectangleRounded(rec, 0.08f, 6, (Color){ 10, 12, 18, 220 });
-            std::string cdText = "COOLDOWN: " + std::to_string(skill.currentCooldown) + "T";
+            std::string cdText = "COOLDOWN: " + std::to_string(skill.GetCurrentCooldown()) + "T";
             int tw = MeasureText(cdText.c_str(), 26);
             DrawText(cdText.c_str(), (int)(rec.x + (rec.width - tw) * 0.5f), (int)(rec.y + 115), 26, (Color){ 231, 76, 60, 255 });
         }
@@ -353,7 +357,7 @@ void CombatRenderer::DrawLogPanel(const std::vector<CombatLogEntry>& log) {
     int lineY = (int)logRec.y + 48;
 
     for (size_t i = startIndex; i < log.size(); ++i) {
-        DrawText(log[i].text.c_str(), (int)logRec.x + 25, lineY, 20, log[i].color);
+        DrawText(log[i].text.c_str(), (int)logRec.x + 25, lineY, 20, ToRaylibColor(log[i].color));
         lineY += 28;
     }
 }

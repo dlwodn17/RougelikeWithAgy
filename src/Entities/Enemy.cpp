@@ -1,6 +1,6 @@
 #include "Entities/Enemy.hpp"
 
-Enemy::Enemy(const std::string& name, const std::string& type, int maxHp, Color enemyColor, int enemyTier)
+Enemy::Enemy(const std::string& name, const std::string& type, int maxHp, ColorRGBA enemyColor, int enemyTier)
     : Entity(name, maxHp), enemyType(type), tier(enemyTier), patternIndex(0), color(enemyColor) {
 }
 
@@ -8,7 +8,6 @@ void Enemy::DecideIntent(int turn, const Player& player, WeatherType currentWeat
     (void)turn;
     (void)player;
 
-    // AI Intent logic based on type and weather
     if (enemyType == "Aquamancer Slime") {
         int cycle = patternIndex % 3;
         if (cycle == 0) {

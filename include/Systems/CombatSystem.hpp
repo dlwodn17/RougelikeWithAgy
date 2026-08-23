@@ -77,7 +77,10 @@ public:
     int GetTurnCounter() const { return turnCounter; }
 
     const std::vector<CombatLogEntry>& GetCombatLog() const { return combatLog; }
-    void AddCombatLog(const std::string& text, Color color = WHITE);
+    void AddCombatLog(const std::string& text, ColorRGBA color = { 255, 255, 255, 255 });
+    void AddCombatLog(const std::string& text, Color color) {
+        AddCombatLog(text, ColorRGBA{ color.r, color.g, color.b, color.a });
+    }
 
     void CheckBattleEndConditions();
 };
