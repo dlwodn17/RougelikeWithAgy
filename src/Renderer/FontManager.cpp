@@ -30,17 +30,20 @@ void FontManager::Initialize() {
     codepoints.push_back(0x2620); // ☠
 
     const char* fontPaths[] = {
-        "C:/Windows/Fonts/malgun.ttf",
-        "C:/Windows/Fonts/gulim.ttc",
-        "C:/Windows/Fonts/batang.ttc"
+        "assets/fonts/KMU80TTFSungkokSerif.ttf", // Primary: KMU 80th Sungkok Serif
+        "assets/fonts/font.ttf",
+        "C:/Windows/Fonts/malgun.ttf",           // Fallback 1: Malgun Gothic
+        "C:/Windows/Fonts/gulim.ttc",            // Fallback 2: Gulim
+        "C:/Windows/Fonts/batang.ttc"            // Fallback 3: Batang
     };
 
     for (const char* path : fontPaths) {
         if (FileExists(path)) {
-            koreanFont = LoadFontEx(path, 36, codepoints.data(), static_cast<int>(codepoints.size()));
+            koreanFont = LoadFontEx(path, 40, codepoints.data(), static_cast<int>(codepoints.size()));
             if (koreanFont.baseSize > 0) {
                 SetTextureFilter(koreanFont.texture, TEXTURE_FILTER_BILINEAR);
                 fontLoaded = true;
+                std::cout << "[FontManager] Loaded font successfully from: " << path << " (Base size: 40, Glyphs: " << koreanFont.glyphCount << ")" << std::endl;
                 break;
             }
         }
@@ -48,6 +51,7 @@ void FontManager::Initialize() {
 
     if (!fontLoaded) {
         koreanFont = GetFontDefault();
+        std::cout << "[FontManager] Warning: Fallback to default font." << std::endl;
     }
 }
 

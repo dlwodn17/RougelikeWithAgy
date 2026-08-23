@@ -61,12 +61,12 @@ void WeatherRenderer::DrawWeatherBadge(Rectangle rec, WeatherType weather, const
 
     if (isActive) {
         std::string title = std::string(prefix) + " " + Localization::GetWeatherName(weather);
-        FontManager::DrawText(title.c_str(), (int)rec.x + 20, (int)rec.y + 14, 24, wColor);
+        FontManager::DrawText(title.c_str(), (int)rec.x + 20, (int)rec.y + 14, FontSize::BUTTON_LARGE, wColor);
         FontManager::DrawText(Localization::GetWeatherShortDesc(weather), (int)rec.x + 20, (int)rec.y + 50, 17, (Color){ 215, 225, 240, 255 });
     } else {
         std::string title = std::string(prefix) + ": " + Localization::GetWeatherName(weather);
-        FontManager::DrawText(title.c_str(), (int)rec.x + 16, (int)rec.y + 14, 19, wColor);
-        FontManager::DrawText(Localization::GetWeatherShortDesc(weather), (int)rec.x + 16, (int)rec.y + 48, 15, (Color){ 165, 175, 195, 255 });
+        FontManager::DrawText(title.c_str(), (int)rec.x + 16, (int)rec.y + 14, FontSize::BUTTON_MEDIUM, wColor);
+        FontManager::DrawText(Localization::GetWeatherShortDesc(weather), (int)rec.x + 16, (int)rec.y + 48, FontSize::CAPTION, (Color){ 165, 175, 195, 255 });
     }
 }
 
@@ -80,11 +80,11 @@ void WeatherRenderer::DrawForecastPanel(const WeatherSystem& weatherSystem) {
 
     // Section Title
     if (Localization::IsKorean()) {
-        FontManager::DrawText("날씨 예보 시스템", 60, 36, 20, (Color){ 160, 175, 200, 255 });
-        FontManager::DrawText("[향후 3턴 예보 큐]", 60, 66, 15, (Color){ 120, 130, 150, 255 });
+        FontManager::DrawText("날씨 예보 시스템", 60, 36, FontSize::BODY_REGULAR, (Color){ 160, 175, 200, 255 });
+        FontManager::DrawText("[향후 3턴 예보 큐]", 60, 66, FontSize::CAPTION, (Color){ 120, 130, 150, 255 });
     } else {
-        FontManager::DrawText("WEATHER FORECAST", 60, 36, 20, (Color){ 160, 175, 200, 255 });
-        FontManager::DrawText("[1-3 Turns Ahead Queue]", 60, 66, 15, (Color){ 120, 130, 150, 255 });
+        FontManager::DrawText("WEATHER FORECAST", 60, 36, FontSize::BODY_REGULAR, (Color){ 160, 175, 200, 255 });
+        FontManager::DrawText("[1-3 Turns Ahead Queue]", 60, 66, FontSize::CAPTION, (Color){ 120, 130, 150, 255 });
     }
 
     // 1. Active Weather Card
@@ -108,8 +108,8 @@ void WeatherRenderer::DrawForecastPanel(const WeatherSystem& weatherSystem) {
     DrawRectangleRounded(langRec, 0.12f, 8, (Color){ 230, 126, 34, 255 });
     DrawRectangleRoundedLinesEx(langRec, 0.12f, 8, 2.0f, (Color){ 243, 156, 18, 255 });
     std::string langText = Localization::IsKorean() ? "언어: 한국어" : "Lang: ENG";
-    int ltw = FontManager::MeasureText(langText.c_str(), 20);
-    FontManager::DrawText(langText.c_str(), (int)(langRec.x + (langRec.width - ltw) * 0.5f), (int)langRec.y + 18, 20, WHITE);
+    int ltw = FontManager::MeasureText(langText.c_str(), FontSize::BUTTON_MEDIUM);
+    FontManager::DrawText(langText.c_str(), (int)(langRec.x + (langRec.width - ltw) * 0.5f), (int)langRec.y + 18, FontSize::BUTTON_MEDIUM, WHITE);
     FontManager::DrawText("[ L ]", (int)(langRec.x + (langRec.width - FontManager::MeasureText("[ L ]", 16)) * 0.5f), (int)langRec.y + 48, 16, (Color){ 255, 230, 180, 255 });
 
     // 2. Guide Button [H]
@@ -117,16 +117,16 @@ void WeatherRenderer::DrawForecastPanel(const WeatherSystem& weatherSystem) {
     DrawRectangleRounded(helpRec, 0.12f, 8, (Color){ 41, 128, 185, 255 });
     DrawRectangleRoundedLinesEx(helpRec, 0.12f, 8, 2.0f, (Color){ 52, 152, 219, 255 });
     std::string helpText = Localization::IsKorean() ? "도움말 [H]" : "Guide [H]";
-    int htw = FontManager::MeasureText(helpText.c_str(), 24);
-    FontManager::DrawText(helpText.c_str(), (int)(helpRec.x + (helpRec.width - htw) * 0.5f), (int)helpRec.y + 26, 24, WHITE);
+    int htw = FontManager::MeasureText(helpText.c_str(), FontSize::BUTTON_LARGE);
+    FontManager::DrawText(helpText.c_str(), (int)(helpRec.x + (helpRec.width - htw) * 0.5f), (int)helpRec.y + 26, FontSize::BUTTON_LARGE, WHITE);
 
     // 3. Options Button [O]
     Rectangle optRec = { (float)w - 460.0f, 35.0f, 210.0f, 80.0f };
     DrawRectangleRounded(optRec, 0.12f, 8, (Color){ 39, 174, 96, 255 });
     DrawRectangleRoundedLinesEx(optRec, 0.12f, 8, 2.0f, (Color){ 46, 204, 113, 255 });
     std::string optText = Localization::IsKorean() ? "설정 [O]" : "Options [O]";
-    int otw = FontManager::MeasureText(optText.c_str(), 24);
-    FontManager::DrawText(optText.c_str(), (int)(optRec.x + (optRec.width - otw) * 0.5f), (int)optRec.y + 26, 24, WHITE);
+    int otw = FontManager::MeasureText(optText.c_str(), FontSize::BUTTON_LARGE);
+    FontManager::DrawText(optText.c_str(), (int)(optRec.x + (optRec.width - otw) * 0.5f), (int)optRec.y + 26, FontSize::BUTTON_LARGE, WHITE);
 
     // 4. Fullscreen Button [F11]
     Rectangle fsRec = { (float)w - 230.0f, 35.0f, 190.0f, 80.0f };
@@ -134,7 +134,7 @@ void WeatherRenderer::DrawForecastPanel(const WeatherSystem& weatherSystem) {
     std::string fsText = isFs ? (Localization::IsKorean() ? "창모드" : "Window") : (Localization::IsKorean() ? "전체화면" : "Fullscreen");
     DrawRectangleRounded(fsRec, 0.12f, 8, (Color){ 108, 92, 231, 255 });
     DrawRectangleRoundedLinesEx(fsRec, 0.12f, 8, 2.0f, (Color){ 155, 89, 182, 255 });
-    int fsW = FontManager::MeasureText(fsText.c_str(), 22);
-    FontManager::DrawText(fsText.c_str(), (int)(fsRec.x + (fsRec.width - fsW) * 0.5f), (int)fsRec.y + 16, 22, WHITE);
+    int fsW = FontManager::MeasureText(fsText.c_str(), FontSize::BUTTON_MEDIUM + 2);
+    FontManager::DrawText(fsText.c_str(), (int)(fsRec.x + (fsRec.width - fsW) * 0.5f), (int)fsRec.y + 16, FontSize::BUTTON_MEDIUM + 2, WHITE);
     FontManager::DrawText("[F11]", (int)(fsRec.x + (fsRec.width - FontManager::MeasureText("[F11]", 16)) * 0.5f), (int)fsRec.y + 46, 16, (Color){ 220, 205, 255, 255 });
 }

@@ -56,6 +56,22 @@ namespace GameConstants {
 }
 
 // ==========================================
+// Centralized Font Size Theme (QHD 2560x1440)
+// ==========================================
+namespace FontSize {
+    constexpr int TITLE_LARGE   = 54; // 메인 타이틀
+    constexpr int TITLE_MEDIUM  = 46; // 승리 / 패배 오버레이 헤더
+    constexpr int MODAL_HEADER  = 34; // 설정 / 도감 창 대형 헤더
+    constexpr int CARD_TITLE    = 26; // 영웅 / 적 이름
+    constexpr int BUTTON_LARGE  = 24; // 원정 시작, 턴 실행 버튼
+    constexpr int BUTTON_MEDIUM = 20; // 탭 / 태세 / 옵션 버튼
+    constexpr int BODY_REGULAR  = 20; // 인텐트, 전투 행동 로그
+    constexpr int BODY_SMALL    = 18; // 상태이상 배지, 스킬 속성
+    constexpr int CAPTION       = 15; // 스킬/날씨 보조 설명
+    constexpr int FLOATING_TEXT = 24; // 대미지 / 반응 플로팅 텍스트
+}
+
+// ==========================================
 // Display & Multi-Resolution Options
 // ==========================================
 

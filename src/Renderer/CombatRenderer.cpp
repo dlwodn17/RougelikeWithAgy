@@ -23,7 +23,6 @@ bool CombatRenderer::DrawButton(Rectangle rec, const char* text, Color baseColor
     std::string s(text);
     size_t newlinePos = s.find('\n');
     if (newlinePos != std::string::npos) {
-        // Multi-line text button
         std::stringstream ss(s);
         std::string line;
         std::vector<std::string> lines;
@@ -71,7 +70,7 @@ void CombatRenderer::DrawHealthBar(Vector2 pos, Vector2 size, int currentHp, int
     if (shield > 0) {
         hpText += Localization::IsKorean() ? (" (+" + std::to_string(shield) + " 방어막)") : (" (+" + std::to_string(shield) + " SHIELD)");
     }
-    int fontSize = 20;
+    int fontSize = FontSize::BODY_REGULAR;
     int tw = FontManager::MeasureText(hpText.c_str(), fontSize);
     FontManager::DrawText(hpText.c_str(), (int)(pos.x + (size.x - tw) * 0.5f), (int)(pos.y + (size.y - fontSize) * 0.5f), fontSize, WHITE);
 }
@@ -83,7 +82,7 @@ void CombatRenderer::DrawStatusBadges(const std::vector<StatusInstance>& statuse
 
         Color col = ToRaylibColor(ElementalSystem::GetElementColor(st.element));
         std::string badgeText = std::string(Localization::GetElementTag(st.element)) + " (" + std::to_string(st.duration) + "T)";
-        int fontSize = 18;
+        int fontSize = FontSize::BODY_SMALL;
         int tw = FontManager::MeasureText(badgeText.c_str(), fontSize);
         Rectangle badgeRec = { startPos.x + xOffset, startPos.y, (float)tw + 20, 36 };
 
@@ -118,26 +117,26 @@ void CombatRenderer::DrawPlayerPanel(const Player& player, StanceType selectedSt
     // Hero Avatar Badge
     DrawRectangle((int)cardRec.x + 30, (int)cardRec.y + 30, 90, 90, (Color){ 41, 128, 185, 220 });
     DrawRectangleLinesEx((Rectangle){ cardRec.x + 30, cardRec.y + 30, 90, 90 }, 2.5f, borderColor);
-    FontManager::DrawText(Localization::IsKorean() ? "영웅" : "HERO", (int)cardRec.x + 44, (int)cardRec.y + 62, 22, WHITE);
+    FontManager::DrawText(Localization::IsKorean() ? "영웅" : "HERO", (int)cardRec.x + 44, (int)cardRec.y + 62, FontSize::BUTTON_MEDIUM, WHITE);
 
     std::string heroTitle = Localization::IsKorean() ? "비전 결투사 (Arcane Duelist)" : player.GetName();
-    FontManager::DrawText(heroTitle.c_str(), (int)cardRec.x + 140, (int)cardRec.y + 35, 28, WHITE);
+    FontManager::DrawText(heroTitle.c_str(), (int)cardRec.x + 140, (int)cardRec.y + 35, FontSize::CARD_TITLE + 2, WHITE);
 
     const char* stanceName = Localization::GetStanceName(selectedStance);
     Color stanceCol = (Color){ 231, 76, 60, 255 };
     if (selectedStance == StanceType::DEFENSE) stanceCol = (Color){ 46, 204, 113, 255 };
     else if (selectedStance == StanceType::PARRY) stanceCol = (Color){ 241, 196, 15, 255 };
-    FontManager::DrawText(stanceName, (int)cardRec.x + 140, (int)cardRec.y + 78, 20, stanceCol);
+    FontManager::DrawText(stanceName, (int)cardRec.x + 140, (int)cardRec.y + 78, FontSize::BODY_REGULAR, stanceCol);
 
     // HP & Shield
-    FontManager::DrawText(Localization::IsKorean() ? "생명력(HP) & 방어막" : "HEALTH & SHIELD POINTS", (int)cardRec.x + 30, (int)cardRec.y + 145, 18, (Color){ 160, 175, 200, 255 });
+    FontManager::DrawText(Localization::IsKorean() ? "생명력(HP) & 방어막" : "HEALTH & SHIELD POINTS", (int)cardRec.x + 30, (int)cardRec.y + 145, FontSize::BODY_SMALL, (Color){ 160, 175, 200, 255 });
     DrawHealthBar((Vector2){ cardRec.x + 30, cardRec.y + 175 }, (Vector2){ 560, 42 }, player.GetHp(), player.GetMaxHp(), player.GetShield(), (Color){ 46, 204, 113, 255 });
 
     // Active Elemental Status Buffers
-    FontManager::DrawText(Localization::IsKorean() ? "활성 원소 상태이상 버퍼:" : "ACTIVE ELEMENTAL STATUS BUFFER:", (int)cardRec.x + 30, (int)cardRec.y + 245, 18, (Color){ 160, 175, 200, 255 });
+    FontManager::DrawText(Localization::IsKorean() ? "활성 원소 상태이상 버퍼:" : "ACTIVE ELEMENTAL STATUS BUFFER:", (int)cardRec.x + 30, (int)cardRec.y + 245, FontSize::BODY_SMALL, (Color){ 160, 175, 200, 255 });
     auto statusList = player.GetStatusInstances();
     if (statusList.empty()) {
-        FontManager::DrawText(Localization::IsKorean() ? "(상태이상 없음 - 정상 상태)" : "(Clean - No active elemental debuffs)", (int)cardRec.x + 30, (int)cardRec.y + 280, 18, (Color){ 120, 130, 150, 255 });
+        FontManager::DrawText(Localization::IsKorean() ? "(상태이상 없음 - 정상 상태)" : "(Clean - No active elemental debuffs)", (int)cardRec.x + 30, (int)cardRec.y + 280, FontSize::BODY_SMALL, (Color){ 120, 130, 150, 255 });
     } else {
         DrawStatusBadges(statusList, (Vector2){ cardRec.x + 30, cardRec.y + 280 });
     }
@@ -146,14 +145,14 @@ void CombatRenderer::DrawPlayerPanel(const Player& player, StanceType selectedSt
     Rectangle traitRec = { cardRec.x + 25, cardRec.y + 350, 570, 235 };
     DrawRectangleRounded(traitRec, 0.08f, 6, (Color){ 18, 22, 34, 220 });
     if (Localization::IsKorean()) {
-        FontManager::DrawText("전투 가이드 & 조작 단축키:", (int)traitRec.x + 20, (int)traitRec.y + 16, 20, (Color){ 241, 196, 15, 255 });
+        FontManager::DrawText("전투 가이드 & 조작 단축키:", (int)traitRec.x + 20, (int)traitRec.y + 16, FontSize::BODY_REGULAR, (Color){ 241, 196, 15, 255 });
         FontManager::DrawText("- 스킬 선택: [1] 급류 [2] 발화 [3] 낙뢰 [4] 빙하", (int)traitRec.x + 20, (int)traitRec.y + 52, 17, (Color){ 190, 200, 220, 255 });
         FontManager::DrawText("- 태세 변경: [Q] 공격 (+40% 피해) [W] 방어 [E] 패링", (int)traitRec.x + 20, (int)traitRec.y + 82, 17, (Color){ 190, 200, 220, 255 });
         FontManager::DrawText("- 턴 실행: [SPACE] 또는 [ENTER] 키를 눌러 턴 진행", (int)traitRec.x + 20, (int)traitRec.y + 112, 17, (Color){ 190, 200, 220, 255 });
         FontManager::DrawText("- 원소 조합: 수분+전기(감전) / 기름+화염(폭발) / 수분+냉기(빙결)", (int)traitRec.x + 20, (int)traitRec.y + 142, 17, (Color){ 241, 196, 15, 255 });
         FontManager::DrawText("- 단축키: [L] 언어전환 | [O] 해상도/설정 | [H] 도감 | [F11] 전체화면", (int)traitRec.x + 20, (int)traitRec.y + 172, 17, (Color){ 108, 92, 231, 255 });
     } else {
-        FontManager::DrawText("COMBAT TACTICS & HOTKEYS:", (int)traitRec.x + 20, (int)traitRec.y + 16, 20, (Color){ 241, 196, 15, 255 });
+        FontManager::DrawText("COMBAT TACTICS & HOTKEYS:", (int)traitRec.x + 20, (int)traitRec.y + 16, FontSize::BODY_REGULAR, (Color){ 241, 196, 15, 255 });
         FontManager::DrawText("- Skills: [1] Torrent [2] Ignition [3] Thunder [4] Glacial", (int)traitRec.x + 20, (int)traitRec.y + 52, 17, (Color){ 190, 200, 220, 255 });
         FontManager::DrawText("- Stance: [Q] Attack (+40% DMG) [W] Defense [E] Parry", (int)traitRec.x + 20, (int)traitRec.y + 82, 17, (Color){ 190, 200, 220, 255 });
         FontManager::DrawText("- Execution: Press [SPACE] or [ENTER] to Execute Turn", (int)traitRec.x + 20, (int)traitRec.y + 112, 17, (Color){ 190, 200, 220, 255 });
@@ -199,8 +198,8 @@ void CombatRenderer::DrawEnemyPanel(const CombatSystem& combat) {
 
         if (isSelected) {
             std::string targetTag = Localization::IsKorean() ? "▼ 지정된 타겟 ▼" : "[v ACTIVE TARGET v]";
-            int ttw = FontManager::MeasureText(targetTag.c_str(), 22);
-            FontManager::DrawText(targetTag.c_str(), (int)(rec.x + (rec.width - ttw) * 0.5f), (int)rec.y - 30, 22, (Color){ 241, 196, 15, 255 });
+            int ttw = FontManager::MeasureText(targetTag.c_str(), FontSize::BUTTON_MEDIUM);
+            FontManager::DrawText(targetTag.c_str(), (int)(rec.x + (rec.width - ttw) * 0.5f), (int)rec.y - 30, FontSize::BUTTON_MEDIUM, (Color){ 241, 196, 15, 255 });
         }
 
         std::string enemyDisplayName = enemy.GetName();
@@ -213,7 +212,7 @@ void CombatRenderer::DrawEnemyPanel(const CombatSystem& combat) {
             else if (enemy.GetName() == "Storm Minion") enemyDisplayName = "폭풍 하수인 (Storm Minion)";
             else if (enemy.GetName() == "Pyro Minion") enemyDisplayName = "화염 하수인 (Pyro Minion)";
         }
-        FontManager::DrawText(enemyDisplayName.c_str(), (int)rec.x + 25, (int)rec.y + 22, 26, ToRaylibColor(enemy.GetColor()));
+        FontManager::DrawText(enemyDisplayName.c_str(), (int)rec.x + 25, (int)rec.y + 22, FontSize::CARD_TITLE, ToRaylibColor(enemy.GetColor()));
 
         const Intent& intent = enemy.GetIntent();
         Rectangle intentRec = { rec.x + 25, rec.y + 65, rec.width - 50, 75 };
@@ -226,16 +225,16 @@ void CombatRenderer::DrawEnemyPanel(const CombatSystem& combat) {
         } else if (intent.type == IntentType::DEFEND) {
             intentText += Localization::IsKorean() ? (" (+" + std::to_string(intent.value) + " 방어막)") : (" (+" + std::to_string(intent.value) + " SHIELD)");
         }
-        FontManager::DrawText(intentText.c_str(), (int)intentRec.x + 16, (int)intentRec.y + 12, 20, intentBorder);
+        FontManager::DrawText(intentText.c_str(), (int)intentRec.x + 16, (int)intentRec.y + 12, FontSize::BODY_REGULAR, intentBorder);
         FontManager::DrawText(intent.desc.c_str(), (int)intentRec.x + 16, (int)intentRec.y + 42, 16, (Color){ 180, 190, 205, 255 });
 
-        FontManager::DrawText(Localization::IsKorean() ? "생명력 & 방어막" : "HP & SHIELD", (int)rec.x + 25, (int)rec.y + 155, 18, (Color){ 160, 175, 200, 255 });
+        FontManager::DrawText(Localization::IsKorean() ? "생명력 & 방어막" : "HP & SHIELD", (int)rec.x + 25, (int)rec.y + 155, FontSize::BODY_SMALL, (Color){ 160, 175, 200, 255 });
         DrawHealthBar((Vector2){ rec.x + 25.0f, rec.y + 185.0f }, (Vector2){ rec.width - 50.0f, 42.0f }, enemy.GetHp(), enemy.GetMaxHp(), enemy.GetShield(), (Color){ 231, 76, 60, 255 });
 
-        FontManager::DrawText(Localization::IsKorean() ? "원소 상태이상 버퍼:" : "STATUS EFFECT BUFFER:", (int)rec.x + 25, (int)rec.y + 250, 18, (Color){ 160, 175, 200, 255 });
+        FontManager::DrawText(Localization::IsKorean() ? "원소 상태이상 버퍼:" : "STATUS EFFECT BUFFER:", (int)rec.x + 25, (int)rec.y + 250, FontSize::BODY_SMALL, (Color){ 160, 175, 200, 255 });
         auto statusList = enemy.GetStatusInstances();
         if (statusList.empty()) {
-            FontManager::DrawText(Localization::IsKorean() ? "(부여된 원소 상태이상 없음)" : "(No active elemental status)", (int)rec.x + 25, (int)rec.y + 285, 18, (Color){ 120, 130, 150, 255 });
+            FontManager::DrawText(Localization::IsKorean() ? "(부여된 원소 상태이상 없음)" : "(No active elemental status)", (int)rec.x + 25, (int)rec.y + 285, FontSize::BODY_SMALL, (Color){ 120, 130, 150, 255 });
         } else {
             DrawStatusBadges(statusList, (Vector2){ rec.x + 25, rec.y + 285 });
         }
@@ -244,13 +243,13 @@ void CombatRenderer::DrawEnemyPanel(const CombatSystem& combat) {
             Rectangle freezeRec = { rec.x + 25, rec.y + 355, rec.width - 50, 55 };
             DrawRectangleRounded(freezeRec, 0.15f, 6, (Color){ 41, 128, 185, 220 });
             std::string fzText = Localization::IsKorean() ? "[빙결 상태] (다음 턴 행동 불가)" : "[FROZEN] (Next Action Skipped)";
-            FontManager::DrawText(fzText.c_str(), (int)freezeRec.x + 25, (int)freezeRec.y + 14, 22, WHITE);
+            FontManager::DrawText(fzText.c_str(), (int)freezeRec.x + 25, (int)freezeRec.y + 14, FontSize::BUTTON_MEDIUM, WHITE);
         }
 
         if (!isSelected) {
             std::string clickText = Localization::IsKorean() ? "[ 마우스로 클릭하여 타겟 지정 ]" : "[ Click to Target Enemy ]";
-            int ctw = FontManager::MeasureText(clickText.c_str(), 18);
-            FontManager::DrawText(clickText.c_str(), (int)(rec.x + (rec.width - ctw) * 0.5f), (int)rec.y + 560, 18, (Color){ 130, 140, 160, 255 });
+            int ctw = FontManager::MeasureText(clickText.c_str(), FontSize::BODY_SMALL);
+            FontManager::DrawText(clickText.c_str(), (int)(rec.x + (rec.width - ctw) * 0.5f), (int)rec.y + 560, FontSize::BODY_SMALL, (Color){ 130, 140, 160, 255 });
         }
     }
 }
@@ -264,7 +263,7 @@ void CombatRenderer::DrawStancePanel(const CombatSystem& combat) {
     DrawCard(panelRec, (Color){ 22, 28, 42, 230 }, (Color){ 65, 75, 95, 255 }, 0.08f);
 
     std::string header = Localization::IsKorean() ? "전투 태세 선택 [ Q / W / E ]" : "STANCE SELECTION [ Q / W / E ]";
-    FontManager::DrawText(header.c_str(), (int)panelRec.x + 25, (int)panelRec.y + 18, 22, (Color){ 241, 196, 15, 255 });
+    FontManager::DrawText(header.c_str(), (int)panelRec.x + 25, (int)panelRec.y + 18, FontSize::BUTTON_MEDIUM, (Color){ 241, 196, 15, 255 });
 
     Rectangle atkRec = { panelRec.x + 20, panelRec.y + 60, 180, 175 };
     Rectangle defRec = { panelRec.x + 220, panelRec.y + 60, 180, 175 };
@@ -278,9 +277,9 @@ void CombatRenderer::DrawStancePanel(const CombatSystem& combat) {
     const char* defLabel = Localization::IsKorean() ? "방어 [W]\n\n+18 방어막\n피해 -30%" : "DEF [W]\n\n+18 Shield\n-30% DMG";
     const char* parLabel = Localization::IsKorean() ? "패링 [E]\n\n상태 반사\n12 반격" : "PARRY [E]\n\nReflect\nCounter";
 
-    DrawButton(atkRec, atkLabel, (Color){ 192, 57, 43, 220 }, (Color){ 231, 76, 60, 255 }, atkActive, !isInputPhase, 20);
-    DrawButton(defRec, defLabel, (Color){ 39, 174, 96, 220 }, (Color){ 46, 204, 113, 255 }, defActive, !isInputPhase, 20);
-    DrawButton(parRec, parLabel, (Color){ 211, 84, 0, 220 }, (Color){ 243, 156, 18, 255 }, parActive, !isInputPhase, 20);
+    DrawButton(atkRec, atkLabel, (Color){ 192, 57, 43, 220 }, (Color){ 231, 76, 60, 255 }, atkActive, !isInputPhase, FontSize::BUTTON_MEDIUM);
+    DrawButton(defRec, defLabel, (Color){ 39, 174, 96, 220 }, (Color){ 46, 204, 113, 255 }, defActive, !isInputPhase, FontSize::BUTTON_MEDIUM);
+    DrawButton(parRec, parLabel, (Color){ 211, 84, 0, 220 }, (Color){ 243, 156, 18, 255 }, parActive, !isInputPhase, FontSize::BUTTON_MEDIUM);
 }
 
 void CombatRenderer::DrawSkillPanel(const CombatSystem& combat) {
@@ -315,22 +314,22 @@ void CombatRenderer::DrawSkillPanel(const CombatSystem& combat) {
 
         std::string hotkeyTitle = "[" + std::to_string(i + 1) + "] " + skillDisplayName;
         Color themeCol = ToRaylibColor(skill.GetThemeColor());
-        FontManager::DrawText(hotkeyTitle.c_str(), (int)rec.x + 18, (int)rec.y + 16, 22, isReady ? themeCol : (Color){ 130, 135, 145, 255 });
+        FontManager::DrawText(hotkeyTitle.c_str(), (int)rec.x + 18, (int)rec.y + 16, FontSize::BUTTON_MEDIUM, isReady ? themeCol : (Color){ 130, 135, 145, 255 });
 
         Element effElem = skill.GetEffectiveElement();
         const char* elemName = Localization::GetElementName(effElem);
-        FontManager::DrawText(elemName, (int)rec.x + 18, (int)rec.y + 52, 18, ToRaylibColor(ElementalSystem::GetElementColor(effElem)));
+        FontManager::DrawText(elemName, (int)rec.x + 18, (int)rec.y + 52, FontSize::BODY_SMALL, ToRaylibColor(ElementalSystem::GetElementColor(effElem)));
 
         std::string dmgText = std::to_string(skill.GetEffectiveDamage()) + (Localization::IsKorean() ? " 피해" : " DMG");
-        FontManager::DrawText(dmgText.c_str(), (int)rec.x + (int)rec.width - 110, (int)rec.y + 52, 20, (Color){ 241, 196, 15, 255 });
+        FontManager::DrawText(dmgText.c_str(), (int)rec.x + (int)rec.width - 110, (int)rec.y + 52, FontSize::BODY_REGULAR, (Color){ 241, 196, 15, 255 });
 
-        FontManager::DrawText(skill.GetDescription().c_str(), (int)rec.x + 18, (int)rec.y + 92, 15, (Color){ 180, 190, 205, 255 });
+        FontManager::DrawText(skill.GetDescription().c_str(), (int)rec.x + 18, (int)rec.y + 92, FontSize::CAPTION, (Color){ 180, 190, 205, 255 });
 
         if (!isReady) {
             DrawRectangleRounded(rec, 0.08f, 6, (Color){ 10, 12, 18, 220 });
             std::string cdText = Localization::IsKorean() ? ("재사용 대기: " + std::to_string(skill.GetCurrentCooldown()) + "턴") : ("COOLDOWN: " + std::to_string(skill.GetCurrentCooldown()) + "T");
-            int tw = FontManager::MeasureText(cdText.c_str(), 24);
-            FontManager::DrawText(cdText.c_str(), (int)(rec.x + (rec.width - tw) * 0.5f), (int)(rec.y + 115), 24, (Color){ 231, 76, 60, 255 });
+            int tw = FontManager::MeasureText(cdText.c_str(), FontSize::BUTTON_LARGE);
+            FontManager::DrawText(cdText.c_str(), (int)(rec.x + (rec.width - tw) * 0.5f), (int)(rec.y + 115), FontSize::BUTTON_LARGE, (Color){ 231, 76, 60, 255 });
         }
     }
 }
@@ -340,7 +339,7 @@ void CombatRenderer::DrawExecuteButton(const CombatSystem& combat) {
     Rectangle rec = { GameConstants::EXECUTE_BTN_X, GameConstants::EXECUTE_BTN_Y,
                       GameConstants::EXECUTE_BTN_W, GameConstants::EXECUTE_BTN_H };
     const char* execLabel = Localization::IsKorean() ? "턴 실행\n\n[SPACE]" : "EXECUTE\n TURN\n\n[SPACE]";
-    DrawButton(rec, execLabel, (Color){ 39, 174, 96, 220 }, (Color){ 46, 204, 113, 255 }, false, !isInputPhase, 24);
+    DrawButton(rec, execLabel, (Color){ 39, 174, 96, 220 }, (Color){ 46, 204, 113, 255 }, false, !isInputPhase, FontSize::BUTTON_LARGE);
 }
 
 void CombatRenderer::DrawLogPanel(const std::vector<CombatLogEntry>& log) {
@@ -349,14 +348,14 @@ void CombatRenderer::DrawLogPanel(const std::vector<CombatLogEntry>& log) {
     DrawCard(logRec, (Color){ 18, 22, 32, 245 }, (Color){ 55, 65, 85, 255 }, 0.06f);
 
     std::string header = Localization::IsKorean() ? "전투 행동 로그" : "COMBAT ACTION LOG";
-    FontManager::DrawText(header.c_str(), (int)logRec.x + 25, (int)logRec.y + 15, 20, (Color){ 160, 175, 200, 255 });
+    FontManager::DrawText(header.c_str(), (int)logRec.x + 25, (int)logRec.y + 15, FontSize::BODY_REGULAR, (Color){ 160, 175, 200, 255 });
 
     int maxEntries = 8;
     int startIndex = std::max(0, (int)log.size() - maxEntries);
     int lineY = (int)logRec.y + 48;
 
     for (size_t i = startIndex; i < log.size(); ++i) {
-        FontManager::DrawText(log[i].text.c_str(), (int)logRec.x + 25, lineY, 20, ToRaylibColor(log[i].color));
+        FontManager::DrawText(log[i].text.c_str(), (int)logRec.x + 25, lineY, FontSize::BODY_REGULAR, ToRaylibColor(log[i].color));
         lineY += 28;
     }
 }
