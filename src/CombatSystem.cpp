@@ -24,7 +24,7 @@ void CombatSystem::InitializeNewRun() {
     particleSystem.ClearAll();
 
     weatherSystem.Initialize(WeatherType::CLEAR);
-    skillSystem.InitializeDefaultSkills();
+    player.ResetCooldowns();
 
     AddCombatLog("=== RUN STARTED: Tower of Elemental Convergence ===", (Color){ 241, 196, 15, 255 });
     AddCombatLog("Tip: Combine elements (e.g. WET + LIGHTNING = SHOCK) to exploit weaknesses!", (Color){ 189, 195, 199, 255 });
@@ -38,8 +38,6 @@ void CombatSystem::StartWave(int waveNumber) {
     selectedTargetIndex = 0;
 
     int screenWidth = 1280;
-    int screenHeight = 720;
-    (void)screenHeight;
 
     if (waveNumber == 1) {
         AddCombatLog("--- WAVE 1 / 3: Apprentice & Slime ---", (Color){ 52, 152, 219, 255 });
@@ -103,7 +101,7 @@ void CombatSystem::AddCombatLog(const std::string& text, Color color) {
 
 void CombatSystem::SelectSkill(int index) {
     if (currentPhase != CombatPhase::PLAYER_INPUT) return;
-    if (index >= 0 && index < static_cast<int>(skillSystem.GetSkills().size())) {
+    if (index >= 0 && index < static_cast<int>(player.GetSkills().size())) {
         selectedSkillIndex = index;
     }
 }
@@ -125,14 +123,13 @@ void CombatSystem::SelectStance(StanceType stance) {
 
 bool CombatSystem::ExecutePlayerTurn() {
     if (currentPhase != CombatPhase::PLAYER_INPUT) return false;
-    if (!skillSystem.CanUseSkill(selectedSkillIndex)) {
+    if (!player.CanUseSkill(selectedSkillIndex)) {
         AddCombatLog("Cannot use skill: On Cooldown!", (Color){ 231, 76, 60, 255 });
         return false;
     }
 
     // Ensure target is valid
     if (selectedTargetIndex < 0 || selectedTargetIndex >= static_cast<int>(enemies.size()) || !enemies[selectedTargetIndex].IsAlive()) {
-        // Auto pick first alive target
         bool found = false;
         for (size_t i = 0; i < enemies.size(); ++i) {
             if (enemies[i].IsAlive()) {
@@ -156,16 +153,22 @@ bool CombatSystem::ExecutePlayerTurn() {
         AddCombatLog("Player enters Parry Stance (Status Reflect & Counter).", (Color){ 241, 196, 15, 255 });
     }
 
-    currentPhase = CombatPhase::ACTION_EXECUTION;
-    phaseTimer = 0.6f;
+    currentPhase = CombatPhase::RESOLVE_PLAYER_ACTION;
+    phaseTimer = 0.5f;
     return true;
 }
 
-void CombatSystem::ProcessPlayerAction() {
-    Skill* skill = skillSystem.GetSkill(selectedSkillIndex);
+// =========================================================================
+// Deterministic 6-Step Turn Resolution Pipeline
+// =========================================================================
+
+// Step 1: Resolve Player Action & Elemental Reactions
+void CombatSystem::Step1_ResolvePlayerAction() {
+    Skill* skill = player.GetSkill(selectedSkillIndex);
     if (!skill) return;
 
-    skillSystem.UseSkill(selectedSkillIndex);
+    // Trigger cooldown on the skill
+    player.UseSkill(selectedSkillIndex);
 
     Enemy& target = enemies[selectedTargetIndex];
     int rawDmg = skill->baseDamage;
@@ -232,71 +235,11 @@ void CombatSystem::ProcessPlayerAction() {
     }
 }
 
-void CombatSystem::ProcessWeatherPhase() {
-    WeatherTriggerResult weatherRes = weatherSystem.ProcessTurnStartWeather();
-    AddCombatLog("[WEATHER: " + weatherRes.title + "] " + weatherRes.description, weatherRes.weatherColor);
-
-    // Apply global status to combatants if active
-    if (weatherRes.globalStatusToApply != Element::NONE) {
-        player.InflictElement(weatherRes.globalStatusToApply, weatherRes.statusDuration);
-        particleSystem.AddFloatingText(player.GetPosition(), "+" + std::string(ElementalSystem::GetElementName(weatherRes.globalStatusToApply)), weatherRes.weatherColor);
-
-        for (auto& enemy : enemies) {
-            if (enemy.IsAlive()) {
-                // If Blizzard and target is wet -> instant freeze!
-                if (weatherSystem.GetCurrentWeather() == WeatherType::BLIZZARD && enemy.HasElement(Element::WET)) {
-                    enemy.ClearElement(Element::WET);
-                    enemy.SetFrozen(true);
-                    particleSystem.AddFloatingText(enemy.GetPosition(), "FROZEN!", (Color){ 162, 222, 255, 255 }, 24.0f);
-                    AddCombatLog(enemy.GetName() + " is drenched and freezes solid in the blizzard!", (Color){ 162, 222, 255, 255 });
-                } else {
-                    enemy.InflictElement(weatherRes.globalStatusToApply, weatherRes.statusDuration);
-                    particleSystem.AddFloatingText(enemy.GetPosition(), "+" + std::string(ElementalSystem::GetElementName(weatherRes.globalStatusToApply)), weatherRes.weatherColor);
-                }
-            }
-        }
-    }
-
-    // Strike random target for Thunderstorm
-    if (weatherRes.strikeRandomEnemy) {
-        std::vector<int> aliveIndices;
-        for (size_t i = 0; i < enemies.size(); ++i) {
-            if (enemies[i].IsAlive()) aliveIndices.push_back((int)i);
-        }
-        if (!aliveIndices.empty()) {
-            int targetIdx = aliveIndices[rand() % aliveIndices.size()];
-            DamageReport strike = enemies[targetIdx].ApplyIncomingDamage(weatherRes.randomStrikeDamage, Element::LIGHTNING);
-            particleSystem.TriggerScreenFlash(0.15f);
-            particleSystem.SpawnHitSparks(enemies[targetIdx].GetPosition(), Element::LIGHTNING, 20);
-            particleSystem.AddFloatingText(enemies[targetIdx].GetPosition(), "-" + std::to_string(strike.mitigatedDamage) + " LIGHTNING", (Color){ 241, 196, 15, 255 });
-            AddCombatLog("⚡ Lightning bolt strikes " + enemies[targetIdx].GetName() + " for " + std::to_string(strike.mitigatedDamage) + " dmg!", (Color){ 241, 196, 15, 255 });
-        }
-    }
-
-    // Spread debuffs for Gale Winds
-    if (weatherRes.spreadAllDebuffs) {
-        std::vector<Element> collectedElements;
-        for (const auto& enemy : enemies) {
-            if (enemy.IsAlive()) {
-                auto spread = ElementalSystem::GetSpreadElements(enemy.GetStatusBuffer());
-                collectedElements.insert(collectedElements.end(), spread.begin(), spread.end());
-            }
-        }
-        for (Element elem : collectedElements) {
-            for (auto& enemy : enemies) {
-                if (enemy.IsAlive()) enemy.InflictElement(elem, 2);
-            }
-        }
-        if (!collectedElements.empty()) {
-            AddCombatLog("🌪️ Gale winds swirl statuses across all combatants!", (Color){ 46, 204, 113, 255 });
-        }
-    }
-}
-
-void CombatSystem::ProcessEnemyActionStep() {
+// Step 2: Resolve Enemy AI Action & Reactions
+void CombatSystem::Step2_ResolveEnemyActionStep() {
     if (currentEnemyActionIndex >= static_cast<int>(enemies.size())) {
-        currentPhase = CombatPhase::STATUS_TICK;
-        phaseTimer = 0.5f;
+        currentPhase = CombatPhase::TICK_STATUS_EFFECTS;
+        phaseTimer = 0.4f;
         return;
     }
 
@@ -368,7 +311,8 @@ void CombatSystem::ProcessEnemyActionStep() {
     currentEnemyActionIndex++;
 }
 
-void CombatSystem::ProcessStatusTickPhase() {
+// Step 3: Tick Status Effects / Buffs / Debuffs on all Entities
+void CombatSystem::Step3_TickStatusEffects() {
     std::vector<std::string> tickLogs;
     player.TickStatusEffects(tickLogs);
     for (auto& enemy : enemies) {
@@ -381,27 +325,89 @@ void CombatSystem::ProcessStatusTickPhase() {
         AddCombatLog(log, (Color){ 230, 126, 34, 255 });
     }
 
-    // Reset 1-turn temp shields
+    // Reset 1-turn temporary shields
     player.ResetShield();
     for (auto& enemy : enemies) {
         enemy.ResetShield();
     }
-
-    currentPhase = CombatPhase::TURN_END_CLEANUP;
-    phaseTimer = 0.4f;
 }
 
-void CombatSystem::ProcessTurnEndCleanup() {
-    // 1. Skill cooldowns tick down
-    skillSystem.TickAllCooldowns();
+// Step 4: Tick Player & Enemy Skill Cooldowns
+void CombatSystem::Step4_TickCooldowns() {
+    player.TickCooldowns();
+    AddCombatLog("Skill cooldowns updated (-1 Turn).", (Color){ 160, 175, 200, 255 });
+}
 
-    // 2. Weather forecast shifts
-    weatherSystem.AdvanceForecast();
+// Step 5: Advance Weather Forecast Queue & Apply Environmental Effect
+void CombatSystem::Step5_AdvanceWeatherAndApply() {
+    // Shift forecast queue and get new active weather
+    WeatherType newActiveWeather = weatherSystem.AdvanceTurn();
+    WeatherTriggerResult weatherRes = weatherSystem.ProcessTurnStartWeather();
 
-    // 3. Turn counter increments
+    AddCombatLog("[WEATHER SHIFT: " + weatherRes.title + "] " + weatherRes.description, weatherRes.weatherColor);
+
+    // Apply global status to combatants if active
+    if (weatherRes.globalStatusToApply != Element::NONE) {
+        player.InflictElement(weatherRes.globalStatusToApply, weatherRes.statusDuration);
+        particleSystem.AddFloatingText(player.GetPosition(), "+" + std::string(ElementalSystem::GetElementName(weatherRes.globalStatusToApply)), weatherRes.weatherColor);
+
+        for (auto& enemy : enemies) {
+            if (enemy.IsAlive()) {
+                // If Blizzard and target is wet -> instant freeze!
+                if (newActiveWeather == WeatherType::BLIZZARD && enemy.HasElement(Element::WET)) {
+                    enemy.ClearElement(Element::WET);
+                    enemy.SetFrozen(true);
+                    particleSystem.AddFloatingText(enemy.GetPosition(), "FROZEN!", (Color){ 162, 222, 255, 255 }, 24.0f);
+                    AddCombatLog(enemy.GetName() + " is drenched and freezes solid in the blizzard!", (Color){ 162, 222, 255, 255 });
+                } else {
+                    enemy.InflictElement(weatherRes.globalStatusToApply, weatherRes.statusDuration);
+                    particleSystem.AddFloatingText(enemy.GetPosition(), "+" + std::string(ElementalSystem::GetElementName(weatherRes.globalStatusToApply)), weatherRes.weatherColor);
+                }
+            }
+        }
+    }
+
+    // Strike random target for Thunderstorm
+    if (weatherRes.strikeRandomEnemy) {
+        std::vector<int> aliveIndices;
+        for (size_t i = 0; i < enemies.size(); ++i) {
+            if (enemies[i].IsAlive()) aliveIndices.push_back((int)i);
+        }
+        if (!aliveIndices.empty()) {
+            int targetIdx = aliveIndices[rand() % aliveIndices.size()];
+            DamageReport strike = enemies[targetIdx].ApplyIncomingDamage(weatherRes.randomStrikeDamage, Element::LIGHTNING);
+            particleSystem.TriggerScreenFlash(0.15f);
+            particleSystem.SpawnHitSparks(enemies[targetIdx].GetPosition(), Element::LIGHTNING, 20);
+            particleSystem.AddFloatingText(enemies[targetIdx].GetPosition(), "-" + std::to_string(strike.mitigatedDamage) + " LIGHTNING", (Color){ 241, 196, 15, 255 });
+            AddCombatLog("⚡ Lightning bolt strikes " + enemies[targetIdx].GetName() + " for " + std::to_string(strike.mitigatedDamage) + " dmg!", (Color){ 241, 196, 15, 255 });
+        }
+    }
+
+    // Spread debuffs for Gale Winds
+    if (weatherRes.spreadAllDebuffs) {
+        std::vector<Element> collectedElements;
+        for (const auto& enemy : enemies) {
+            if (enemy.IsAlive()) {
+                auto spread = ElementalSystem::GetSpreadElements(enemy.GetStatusBuffer());
+                collectedElements.insert(collectedElements.end(), spread.begin(), spread.end());
+            }
+        }
+        for (Element elem : collectedElements) {
+            for (auto& enemy : enemies) {
+                if (enemy.IsAlive()) enemy.InflictElement(elem, 2);
+            }
+        }
+        if (!collectedElements.empty()) {
+            AddCombatLog("🌪️ Gale winds swirl statuses across all combatants!", (Color){ 46, 204, 113, 255 });
+        }
+    }
+}
+
+// Step 6: Reset Stances / Action Points and start Next Turn
+void CombatSystem::Step6_ResetTurnAndStartNext() {
     turnCounter++;
 
-    // 4. Check alive enemies and update their next intents
+    // Check alive enemies and update their next intents
     for (auto& enemy : enemies) {
         if (enemy.IsAlive()) {
             enemy.DecideIntent(turnCounter, player, weatherSystem.GetCurrentWeather());
@@ -448,9 +454,9 @@ void CombatSystem::NextWave() {
     if (currentWave < maxWaves) {
         currentWave++;
         player.Heal(25); // Roguelike wave heal
+        player.ResetCooldowns();
         StartWave(currentWave);
     } else {
-        // Loop or finish
         RestartGame();
     }
 }
@@ -473,41 +479,52 @@ void CombatSystem::Update(float dt) {
         return;
     }
 
-    // Step through the combat state machine
+    // Step through the deterministic turn resolution pipeline
     switch (currentPhase) {
-        case CombatPhase::ACTION_EXECUTION:
-            ProcessPlayerAction();
+        case CombatPhase::RESOLVE_PLAYER_ACTION:
+            Step1_ResolvePlayerAction();
             CheckBattleEndConditions();
             if (currentPhase != CombatPhase::VICTORY_SCREEN && currentPhase != CombatPhase::DEFEAT_SCREEN) {
-                currentPhase = CombatPhase::WEATHER_TRIGGER;
-                phaseTimer = 0.5f;
-            }
-            break;
-
-        case CombatPhase::WEATHER_TRIGGER:
-            ProcessWeatherPhase();
-            CheckBattleEndConditions();
-            if (currentPhase != CombatPhase::VICTORY_SCREEN && currentPhase != CombatPhase::DEFEAT_SCREEN) {
-                currentPhase = CombatPhase::ENEMY_ACTIONS;
+                currentPhase = CombatPhase::RESOLVE_ENEMY_ACTIONS;
                 currentEnemyActionIndex = 0;
                 phaseTimer = 0.4f;
             }
             break;
 
-        case CombatPhase::ENEMY_ACTIONS:
-            ProcessEnemyActionStep();
+        case CombatPhase::RESOLVE_ENEMY_ACTIONS:
+            Step2_ResolveEnemyActionStep();
             CheckBattleEndConditions();
-            if (currentPhase == CombatPhase::ENEMY_ACTIONS) {
-                phaseTimer = 0.5f;
+            if (currentPhase == CombatPhase::RESOLVE_ENEMY_ACTIONS) {
+                phaseTimer = 0.45f;
             }
             break;
 
-        case CombatPhase::STATUS_TICK:
-            ProcessStatusTickPhase();
+        case CombatPhase::TICK_STATUS_EFFECTS:
+            Step3_TickStatusEffects();
+            CheckBattleEndConditions();
+            if (currentPhase != CombatPhase::VICTORY_SCREEN && currentPhase != CombatPhase::DEFEAT_SCREEN) {
+                currentPhase = CombatPhase::TICK_COOLDOWNS;
+                phaseTimer = 0.3f;
+            }
             break;
 
-        case CombatPhase::TURN_END_CLEANUP:
-            ProcessTurnEndCleanup();
+        case CombatPhase::TICK_COOLDOWNS:
+            Step4_TickCooldowns();
+            currentPhase = CombatPhase::ADVANCE_WEATHER_AND_APPLY;
+            phaseTimer = 0.4f;
+            break;
+
+        case CombatPhase::ADVANCE_WEATHER_AND_APPLY:
+            Step5_AdvanceWeatherAndApply();
+            CheckBattleEndConditions();
+            if (currentPhase != CombatPhase::VICTORY_SCREEN && currentPhase != CombatPhase::DEFEAT_SCREEN) {
+                currentPhase = CombatPhase::RESET_TURN_AND_START_NEXT;
+                phaseTimer = 0.3f;
+            }
+            break;
+
+        case CombatPhase::RESET_TURN_AND_START_NEXT:
+            Step6_ResetTurnAndStartNext();
             break;
 
         case CombatPhase::PLAYER_INPUT:

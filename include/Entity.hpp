@@ -2,6 +2,7 @@
 
 #include "Common.hpp"
 #include "ElementalSystem.hpp"
+#include "SkillSystem.hpp"
 
 struct DamageReport {
     int rawDamage = 0;
@@ -83,6 +84,7 @@ class Player : public Entity {
 private:
     StanceType currentStance;
     int comboScore;
+    SkillSystem skillSystem;
 
 public:
     Player(std::string name = "Arcane Duelist", int maxHp = 100);
@@ -92,6 +94,17 @@ public:
 
     int GetComboScore() const { return comboScore; }
     void AddComboScore(int points) { comboScore += points; }
+
+    // Skills & Cooldowns
+    SkillSystem& GetSkillSystem() { return skillSystem; }
+    const SkillSystem& GetSkillSystem() const { return skillSystem; }
+    std::vector<Skill>& GetSkills() { return skillSystem.GetSkills(); }
+    const std::vector<Skill>& GetSkills() const { return skillSystem.GetSkills(); }
+    Skill* GetSkill(int index) { return skillSystem.GetSkill(index); }
+    bool CanUseSkill(int index) const { return skillSystem.CanUseSkill(index); }
+    void UseSkill(int index) { skillSystem.UseSkill(index); }
+    void TickCooldowns() { skillSystem.TickCooldowns(); }
+    void ResetCooldowns() { skillSystem.ResetAllCooldowns(); }
 
     DamageReport ApplyIncomingDamage(
         int rawDamage, 

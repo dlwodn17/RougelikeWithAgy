@@ -29,6 +29,8 @@ public:
     WeatherSystem();
 
     void Initialize(WeatherType initialWeather = WeatherType::CLEAR);
+    void Reset(WeatherType initialWeather = WeatherType::CLEAR) { Initialize(initialWeather); }
+    WeatherType AdvanceTurn();
     void AdvanceForecast();
     
     WeatherType GetCurrentWeather() const { return currentWeather; }

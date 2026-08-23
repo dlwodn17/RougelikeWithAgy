@@ -36,7 +36,7 @@ WeatherType WeatherSystem::GenerateRandomWeather() {
     }
 }
 
-void WeatherSystem::AdvanceForecast() {
+WeatherType WeatherSystem::AdvanceTurn() {
     turnsElapsed++;
     if (!forecastQueue.empty()) {
         currentWeather = forecastQueue.front();
@@ -49,6 +49,11 @@ void WeatherSystem::AdvanceForecast() {
     while (forecastQueue.size() < 3) {
         forecastQueue.push_back(GenerateRandomWeather());
     }
+    return currentWeather;
+}
+
+void WeatherSystem::AdvanceForecast() {
+    AdvanceTurn();
 }
 
 WeatherTriggerResult WeatherSystem::ProcessTurnStartWeather() {

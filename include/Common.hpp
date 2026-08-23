@@ -56,14 +56,15 @@ enum class IntentType {
 };
 
 enum class CombatPhase {
-    PLAYER_INPUT = 0,       // Waiting for player skill/stance selection
-    ACTION_EXECUTION,       // Player skill animation & damage/reactions
-    WEATHER_TRIGGER,        // Weather triggers start-of-turn or end-of-turn effects
-    ENEMY_ACTIONS,          // Enemies execute intents sequentially
-    STATUS_TICK,            // Burn DoT, Frozen thaw, shield decays
-    TURN_END_CLEANUP,       // Cooldown ticks, forecast shifts
-    VICTORY_SCREEN,         // Wave cleared
-    DEFEAT_SCREEN           // Player defeated
+    PLAYER_INPUT = 0,               // Waiting for player skill/stance selection
+    RESOLVE_PLAYER_ACTION,          // Step 1: Resolve Player Action & Elemental Reactions
+    RESOLVE_ENEMY_ACTIONS,          // Step 2: Resolve Enemy AI Action & Reactions
+    TICK_STATUS_EFFECTS,            // Step 3: Tick Status Effects / Buffs / Debuffs on all Entities
+    TICK_COOLDOWNS,                 // Step 4: Tick Player & Enemy Skill Cooldowns
+    ADVANCE_WEATHER_AND_APPLY,      // Step 5: Advance Weather Forecast Queue & Apply Environmental Effect
+    RESET_TURN_AND_START_NEXT,      // Step 6: Reset Stances / Action Points and start Next Turn
+    VICTORY_SCREEN,                 // Wave cleared
+    DEFEAT_SCREEN                   // Player defeated
 };
 
 enum class AppState {

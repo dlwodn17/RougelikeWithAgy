@@ -12,7 +12,6 @@ private:
     Player player;
     std::vector<Enemy> enemies;
     WeatherSystem weatherSystem;
-    SkillSystem skillSystem;
     ParticleSystem particleSystem;
 
     CombatPhase currentPhase;
@@ -42,6 +41,14 @@ public:
     void SelectStance(StanceType stance);
     bool ExecutePlayerTurn();
 
+    // Deterministic 6-Step Turn Resolution Pipeline
+    void Step1_ResolvePlayerAction();
+    void Step2_ResolveEnemyActionStep();
+    void Step3_TickStatusEffects();
+    void Step4_TickCooldowns();
+    void Step5_AdvanceWeatherAndApply();
+    void Step6_ResetTurnAndStartNext();
+
     // Progression
     void NextWave();
     void RestartGame();
@@ -56,8 +63,8 @@ public:
     WeatherSystem& GetWeatherSystem() { return weatherSystem; }
     const WeatherSystem& GetWeatherSystem() const { return weatherSystem; }
 
-    SkillSystem& GetSkillSystem() { return skillSystem; }
-    const SkillSystem& GetSkillSystem() const { return skillSystem; }
+    SkillSystem& GetSkillSystem() { return player.GetSkillSystem(); }
+    const SkillSystem& GetSkillSystem() const { return player.GetSkillSystem(); }
 
     ParticleSystem& GetParticleSystem() { return particleSystem; }
 
@@ -72,11 +79,5 @@ public:
     const std::vector<CombatLogEntry>& GetCombatLog() const { return combatLog; }
     void AddCombatLog(const std::string& text, Color color = WHITE);
 
-private:
-    void ProcessPlayerAction();
-    void ProcessWeatherPhase();
-    void ProcessEnemyActionStep();
-    void ProcessStatusTickPhase();
-    void ProcessTurnEndCleanup();
     void CheckBattleEndConditions();
 };

@@ -88,10 +88,18 @@ void SkillSystem::UseSkill(int index) {
     }
 }
 
-void SkillSystem::TickAllCooldowns() {
+void SkillSystem::UpdateCooldowns() {
     for (auto& skill : playerSkills) {
-        skill.TickCooldown();
+        skill.UpdateCooldown();
     }
+}
+
+void SkillSystem::TickCooldowns() {
+    UpdateCooldowns();
+}
+
+void SkillSystem::TickAllCooldowns() {
+    UpdateCooldowns();
 }
 
 void SkillSystem::ResetAllCooldowns() {
@@ -99,3 +107,4 @@ void SkillSystem::ResetAllCooldowns() {
         skill.ResetCooldown();
     }
 }
+

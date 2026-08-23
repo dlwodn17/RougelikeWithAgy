@@ -17,7 +17,8 @@ struct Skill {
 
     bool IsReady() const { return currentCooldown <= 0; }
     void TriggerCooldown() { currentCooldown = maxCooldown; }
-    void TickCooldown() { if (currentCooldown > 0) currentCooldown--; }
+    void UpdateCooldown() { if (currentCooldown > 0) currentCooldown--; }
+    void TickCooldown() { UpdateCooldown(); }
     void ResetCooldown() { currentCooldown = 0; }
 };
 
@@ -35,6 +36,8 @@ public:
     Skill* GetSkill(int index);
     bool CanUseSkill(int index) const;
     void UseSkill(int index);
+    void UpdateCooldowns();
+    void TickCooldowns();
     void TickAllCooldowns();
     void ResetAllCooldowns();
 };
