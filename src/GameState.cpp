@@ -1,10 +1,13 @@
 #include "GameState.hpp"
+#include "Renderer/FontManager.hpp"
+#include "Core/Localization.hpp"
 
 GameManager::GameManager() 
     : state(AppState::TITLE), showSettings(false), showGuide(false), selectedSettingIdx(0) {
 }
 
 void GameManager::Initialize() {
+    FontManager::Initialize();
     uiRenderer.Initialize();
     combatSystem.SetParticleSystem(&particleSystem);
     combatSystem.InitializeNewRun();
@@ -12,6 +15,11 @@ void GameManager::Initialize() {
 
 void GameManager::Update(float dt) {
     Vector2 mousePos = ScreenConfig::GetVirtualMousePosition();
+
+    // Global Language Toggle Hotkey [L]
+    if (IsKeyPressed(KEY_L)) {
+        Localization::ToggleLanguage();
+    }
 
     // 1. Settings Overlay Input Handling
     if (showSettings) {
@@ -40,7 +48,7 @@ void GameManager::Update(float dt) {
             if (IsKeyPressed(KEY_TWO)) DisplaySettings::SetResolutionIndex(1);
             if (IsKeyPressed(KEY_THREE)) DisplaySettings::SetResolutionIndex(2);
             if (IsKeyPressed(KEY_FOUR)) DisplaySettings::SetResolutionIndex(3);
-        } else if (selectedSettingIdx == 1) { // Display Mode Row
+        } else if (selectedSettingIdx == 1) { // Display Mode / Language Row
             if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
                 DisplaySettings::ToggleFullscreenMode();
             }
@@ -57,9 +65,9 @@ void GameManager::Update(float dt) {
             float modalY = (float)uiRenderer.GetVirtualHeight() * 0.5f - 500.0f;
 
             // Resolution buttons (row 0)
-            float yRes = modalY + 190.0f;
+            float yRes = modalY + 182.0f;
             for (int i = 0; i < 4; ++i) {
-                Rectangle btnRec = { modalX + 60.0f + (float)i * 340.0f, yRes, 320.0f, 100.0f };
+                Rectangle btnRec = { modalX + 60.0f + (float)i * 340.0f, yRes, 320.0f, 95.0f };
                 if (CheckCollisionPointRec(mousePos, btnRec)) {
                     DisplaySettings::SetResolutionIndex(i);
                     selectedSettingIdx = 0;
@@ -67,10 +75,12 @@ void GameManager::Update(float dt) {
                 }
             }
 
-            // Display mode buttons (row 1)
-            float yMode = modalY + 375.0f;
-            Rectangle winBtnRec = { modalX + 60.0f, yMode, 400.0f, 90.0f };
-            Rectangle fsBtnRec = { modalX + 490.0f, yMode, 400.0f, 90.0f };
+            // Display mode & language buttons (row 1)
+            float yMode = modalY + 357.0f;
+            Rectangle winBtnRec = { modalX + 60.0f, yMode, 320.0f, 85.0f };
+            Rectangle fsBtnRec = { modalX + 400.0f, yMode, 320.0f, 85.0f };
+            Rectangle langBtnRec = { modalX + 740.0f, yMode, 640.0f, 85.0f };
+
             if (CheckCollisionPointRec(mousePos, winBtnRec)) {
                 if (IsWindowFullscreen()) DisplaySettings::ToggleFullscreenMode();
                 selectedSettingIdx = 1;
@@ -78,6 +88,11 @@ void GameManager::Update(float dt) {
             }
             if (CheckCollisionPointRec(mousePos, fsBtnRec)) {
                 if (!IsWindowFullscreen()) DisplaySettings::ToggleFullscreenMode();
+                selectedSettingIdx = 1;
+                return;
+            }
+            if (CheckCollisionPointRec(mousePos, langBtnRec)) {
+                Localization::ToggleLanguage();
                 selectedSettingIdx = 1;
                 return;
             }
@@ -125,10 +140,15 @@ void GameManager::Update(float dt) {
     // Check Header Button Clicks during BATTLE or TITLE
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
         if (state == AppState::BATTLE) {
+            Rectangle langRec = { (float)uiRenderer.GetVirtualWidth() - 870.0f, 35.0f, 170.0f, 80.0f };
             Rectangle helpRec = { (float)uiRenderer.GetVirtualWidth() - 680.0f, 35.0f, 200.0f, 80.0f };
             Rectangle optRec = { (float)uiRenderer.GetVirtualWidth() - 460.0f, 35.0f, 210.0f, 80.0f };
             Rectangle fsRec = { (float)uiRenderer.GetVirtualWidth() - 230.0f, 35.0f, 190.0f, 80.0f };
 
+            if (CheckCollisionPointRec(mousePos, langRec)) {
+                Localization::ToggleLanguage();
+                return;
+            }
             if (CheckCollisionPointRec(mousePos, helpRec)) {
                 showGuide = true;
                 return;
@@ -143,8 +163,9 @@ void GameManager::Update(float dt) {
             }
         } else if (state == AppState::TITLE) {
             float titleX = (float)uiRenderer.GetVirtualWidth() * 0.5f - 650.0f;
-            Rectangle optRec = { titleX + 1300.0f * 0.5f - 260.0f, 160.0f + 640.0f, 520.0f, 75.0f };
-            Rectangle fsRec = { titleX + 1300.0f * 0.5f - 260.0f, 160.0f + 730.0f, 520.0f, 75.0f };
+            Rectangle optRec = { titleX + 1300.0f * 0.5f - 260.0f, 160.0f + 635.0f, 520.0f, 75.0f };
+            Rectangle fsRec = { titleX + 1300.0f * 0.5f - 260.0f, 160.0f + 725.0f, 520.0f, 75.0f };
+            Rectangle langRec = { titleX + 1300.0f * 0.5f - 260.0f, 160.0f + 815.0f, 520.0f, 65.0f };
 
             if (CheckCollisionPointRec(mousePos, optRec)) {
                 showSettings = true;
@@ -152,6 +173,10 @@ void GameManager::Update(float dt) {
             }
             if (CheckCollisionPointRec(mousePos, fsRec)) {
                 DisplaySettings::ToggleFullscreenMode();
+                return;
+            }
+            if (CheckCollisionPointRec(mousePos, langRec)) {
+                Localization::ToggleLanguage();
                 return;
             }
         }
@@ -166,7 +191,7 @@ void GameManager::Update(float dt) {
             }
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                 float titleX = (float)uiRenderer.GetVirtualWidth() * 0.5f - 650.0f;
-                Rectangle startRec = { titleX + 1300.0f * 0.5f - 260.0f, 160.0f + 540.0f, 520.0f, 85.0f };
+                Rectangle startRec = { titleX + 1300.0f * 0.5f - 260.0f, 160.0f + 535.0f, 520.0f, 85.0f };
                 if (CheckCollisionPointRec(mousePos, startRec)) {
                     combatSystem.InitializeNewRun();
                     state = AppState::BATTLE;
@@ -196,9 +221,9 @@ void GameManager::Update(float dt) {
                 // Mouse Click Input Handling
                 if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                     // Stance Buttons Click
-                    Rectangle atkRec = { GameConstants::STANCE_PANEL_X + 20.0f, GameConstants::STANCE_PANEL_Y + 65.0f, 180.0f, 170.0f };
-                    Rectangle defRec = { GameConstants::STANCE_PANEL_X + 220.0f, GameConstants::STANCE_PANEL_Y + 65.0f, 180.0f, 170.0f };
-                    Rectangle parRec = { GameConstants::STANCE_PANEL_X + 420.0f, GameConstants::STANCE_PANEL_Y + 65.0f, 180.0f, 170.0f };
+                    Rectangle atkRec = { GameConstants::STANCE_PANEL_X + 20.0f, GameConstants::STANCE_PANEL_Y + 60.0f, 180.0f, 175.0f };
+                    Rectangle defRec = { GameConstants::STANCE_PANEL_X + 220.0f, GameConstants::STANCE_PANEL_Y + 60.0f, 180.0f, 175.0f };
+                    Rectangle parRec = { GameConstants::STANCE_PANEL_X + 420.0f, GameConstants::STANCE_PANEL_Y + 60.0f, 180.0f, 175.0f };
 
                     if (CheckCollisionPointRec(mousePos, atkRec)) {
                         combatSystem.SelectStance(StanceType::ATTACK);

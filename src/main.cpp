@@ -3,6 +3,7 @@
 #include "Core/Constants.hpp"
 #include "Systems/ElementalSystem.hpp"
 #include "Entities/Skill.hpp"
+#include "Renderer/FontManager.hpp"
 #include <iostream>
 
 void RunCoreElementalUnitTests() {
@@ -171,6 +172,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Cleanup & Exit
+    FontManager::Unload();
     UnloadRenderTexture(targetCanvas);
     CloseWindow();
     return 0;

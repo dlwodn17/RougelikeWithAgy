@@ -1,4 +1,6 @@
 #include "Renderer/WeatherRenderer.hpp"
+#include "Renderer/FontManager.hpp"
+#include "Core/Localization.hpp"
 #include <string>
 
 void WeatherRenderer::DrawWeatherBackground(WeatherType weather) {
@@ -42,7 +44,7 @@ void WeatherRenderer::DrawWeatherBackground(WeatherType weather) {
 
     DrawRectangleGradientV(0, 0, w, h, topCol, botCol);
 
-    // Decorative subtle battlefield floor grid
+    // Subtle battlefield floor grid
     Color gridColor = (Color){ 255, 255, 255, 10 };
     for (int y = 780; y < h; y += 50) {
         DrawLine(0, y, w, y, gridColor);
@@ -58,15 +60,13 @@ void WeatherRenderer::DrawWeatherBadge(Rectangle rec, WeatherType weather, const
     DrawRectangleRoundedLinesEx(rec, 0.12f, 8, isActive ? 3.0f : 2.0f, border);
 
     if (isActive) {
-        // Active Weather Highlight Badge
-        std::string title = std::string(prefix) + " " + WeatherSystem::GetWeatherIcon(weather);
-        DrawText(title.c_str(), (int)rec.x + 20, (int)rec.y + 14, 26, wColor);
-        DrawText(WeatherSystem::GetWeatherShortDesc(weather), (int)rec.x + 20, (int)rec.y + 50, 18, (Color){ 215, 225, 240, 255 });
+        std::string title = std::string(prefix) + " " + Localization::GetWeatherName(weather);
+        FontManager::DrawText(title.c_str(), (int)rec.x + 20, (int)rec.y + 14, 24, wColor);
+        FontManager::DrawText(Localization::GetWeatherShortDesc(weather), (int)rec.x + 20, (int)rec.y + 50, 17, (Color){ 215, 225, 240, 255 });
     } else {
-        // Forecast Queue Badge
-        std::string title = std::string(prefix) + ": " + WeatherSystem::GetWeatherName(weather);
-        DrawText(title.c_str(), (int)rec.x + 16, (int)rec.y + 14, 19, wColor);
-        DrawText(WeatherSystem::GetWeatherShortDesc(weather), (int)rec.x + 16, (int)rec.y + 48, 15, (Color){ 165, 175, 195, 255 });
+        std::string title = std::string(prefix) + ": " + Localization::GetWeatherName(weather);
+        FontManager::DrawText(title.c_str(), (int)rec.x + 16, (int)rec.y + 14, 19, wColor);
+        FontManager::DrawText(Localization::GetWeatherShortDesc(weather), (int)rec.x + 16, (int)rec.y + 48, 15, (Color){ 165, 175, 195, 255 });
     }
 }
 
@@ -79,13 +79,18 @@ void WeatherRenderer::DrawForecastPanel(const WeatherSystem& weatherSystem) {
     DrawRectangleRoundedLinesEx(barRec, 0.08f, 8, 2.5f, (Color){ 70, 80, 105, 255 });
 
     // Section Title
-    DrawText("WEATHER FORECAST", 65, 38, 20, (Color){ 160, 175, 200, 255 });
-    DrawText("[1-3 Turns Ahead Queue]", 65, 68, 15, (Color){ 120, 130, 150, 255 });
+    if (Localization::IsKorean()) {
+        FontManager::DrawText("날씨 예보 시스템", 60, 36, 20, (Color){ 160, 175, 200, 255 });
+        FontManager::DrawText("[향후 3턴 예보 큐]", 60, 66, 15, (Color){ 120, 130, 150, 255 });
+    } else {
+        FontManager::DrawText("WEATHER FORECAST", 60, 36, 20, (Color){ 160, 175, 200, 255 });
+        FontManager::DrawText("[1-3 Turns Ahead Queue]", 60, 66, 15, (Color){ 120, 130, 150, 255 });
+    }
 
     // 1. Active Weather Card
     WeatherType current = weatherSystem.GetCurrentWeather();
     Rectangle activeRec = { 380.0f, 30.0f, 480.0f, 90.0f };
-    DrawWeatherBadge(activeRec, current, "ACTIVE:", true);
+    DrawWeatherBadge(activeRec, current, Localization::IsKorean() ? "현재 날씨:" : "ACTIVE:", true);
 
     // 2. Next 3 Turns Forecast Queue Cards
     const auto& queue = weatherSystem.GetForecastQueue();
@@ -93,26 +98,43 @@ void WeatherRenderer::DrawForecastPanel(const WeatherSystem& weatherSystem) {
     for (size_t i = 0; i < queue.size() && i < 3; ++i) {
         WeatherType nextW = queue[i];
         Rectangle nextRec = { startX + (float)i * 320.0f, 30.0f, 300.0f, 90.0f };
-        std::string prefix = "+" + std::to_string(i + 1) + " Turn";
+        std::string prefix = Localization::IsKorean() ? ("+" + std::to_string(i + 1) + "턴 뒤") : ("+" + std::to_string(i + 1) + " Turn");
         DrawWeatherBadge(nextRec, nextW, prefix.c_str(), false);
     }
 
     // Top Right Utility Navigation Buttons
+    // 1. Language Toggle Button [L]
+    Rectangle langRec = { (float)w - 870.0f, 35.0f, 170.0f, 80.0f };
+    DrawRectangleRounded(langRec, 0.12f, 8, (Color){ 230, 126, 34, 255 });
+    DrawRectangleRoundedLinesEx(langRec, 0.12f, 8, 2.0f, (Color){ 243, 156, 18, 255 });
+    std::string langText = Localization::IsKorean() ? "언어: 한국어" : "Lang: ENG";
+    int ltw = FontManager::MeasureText(langText.c_str(), 20);
+    FontManager::DrawText(langText.c_str(), (int)(langRec.x + (langRec.width - ltw) * 0.5f), (int)langRec.y + 18, 20, WHITE);
+    FontManager::DrawText("[ L ]", (int)(langRec.x + (langRec.width - FontManager::MeasureText("[ L ]", 16)) * 0.5f), (int)langRec.y + 48, 16, (Color){ 255, 230, 180, 255 });
+
+    // 2. Guide Button [H]
     Rectangle helpRec = { (float)w - 680.0f, 35.0f, 200.0f, 80.0f };
     DrawRectangleRounded(helpRec, 0.12f, 8, (Color){ 41, 128, 185, 255 });
     DrawRectangleRoundedLinesEx(helpRec, 0.12f, 8, 2.0f, (Color){ 52, 152, 219, 255 });
-    DrawText("Guide [H]", (int)helpRec.x + 36, (int)helpRec.y + 26, 24, WHITE);
+    std::string helpText = Localization::IsKorean() ? "도움말 [H]" : "Guide [H]";
+    int htw = FontManager::MeasureText(helpText.c_str(), 24);
+    FontManager::DrawText(helpText.c_str(), (int)(helpRec.x + (helpRec.width - htw) * 0.5f), (int)helpRec.y + 26, 24, WHITE);
 
+    // 3. Options Button [O]
     Rectangle optRec = { (float)w - 460.0f, 35.0f, 210.0f, 80.0f };
     DrawRectangleRounded(optRec, 0.12f, 8, (Color){ 39, 174, 96, 255 });
     DrawRectangleRoundedLinesEx(optRec, 0.12f, 8, 2.0f, (Color){ 46, 204, 113, 255 });
-    DrawText("⚙️ Options [O]", (int)optRec.x + 22, (int)optRec.y + 26, 24, WHITE);
+    std::string optText = Localization::IsKorean() ? "설정 [O]" : "Options [O]";
+    int otw = FontManager::MeasureText(optText.c_str(), 24);
+    FontManager::DrawText(optText.c_str(), (int)(optRec.x + (optRec.width - otw) * 0.5f), (int)optRec.y + 26, 24, WHITE);
 
+    // 4. Fullscreen Button [F11]
     Rectangle fsRec = { (float)w - 230.0f, 35.0f, 190.0f, 80.0f };
     bool isFs = IsWindowFullscreen();
-    std::string fsText = isFs ? "Window" : "Full [F11]";
+    std::string fsText = isFs ? (Localization::IsKorean() ? "창모드" : "Window") : (Localization::IsKorean() ? "전체화면" : "Fullscreen");
     DrawRectangleRounded(fsRec, 0.12f, 8, (Color){ 108, 92, 231, 255 });
     DrawRectangleRoundedLinesEx(fsRec, 0.12f, 8, 2.0f, (Color){ 155, 89, 182, 255 });
-    int fsW = MeasureText(fsText.c_str(), 24);
-    DrawText(fsText.c_str(), (int)(fsRec.x + (fsRec.width - fsW) * 0.5f), (int)fsRec.y + 26, 24, WHITE);
+    int fsW = FontManager::MeasureText(fsText.c_str(), 22);
+    FontManager::DrawText(fsText.c_str(), (int)(fsRec.x + (fsRec.width - fsW) * 0.5f), (int)fsRec.y + 16, 22, WHITE);
+    FontManager::DrawText("[F11]", (int)(fsRec.x + (fsRec.width - FontManager::MeasureText("[F11]", 16)) * 0.5f), (int)fsRec.y + 46, 16, (Color){ 220, 205, 255, 255 });
 }

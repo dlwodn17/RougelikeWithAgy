@@ -1,5 +1,7 @@
 #include "Renderer/ParticleSystem.hpp"
+#include "Renderer/FontManager.hpp"
 #include <random>
+#include <cmath>
 
 static float RandomFloat(float min, float max) {
     static std::mt19937 rng(1337);
@@ -256,10 +258,10 @@ void ParticleSystem::Draw() {
         textColor.a = (unsigned char)(ft.alpha * 255.0f);
         Color shadowColor = (Color){ 10, 10, 15, (unsigned char)(ft.alpha * 220.0f) };
 
-        int textWidth = MeasureText(ft.text.c_str(), (int)ft.fontSize);
+        int textWidth = FontManager::MeasureText(ft.text.c_str(), (int)ft.fontSize);
         Vector2 drawPos = { ft.position.x - textWidth * 0.5f, ft.position.y };
 
-        DrawText(ft.text.c_str(), (int)drawPos.x + 3, (int)drawPos.y + 3, (int)ft.fontSize, shadowColor);
-        DrawText(ft.text.c_str(), (int)drawPos.x, (int)drawPos.y, (int)ft.fontSize, textColor);
+        FontManager::DrawText(ft.text.c_str(), (int)drawPos.x + 3, (int)drawPos.y + 3, (int)ft.fontSize, shadowColor);
+        FontManager::DrawText(ft.text.c_str(), (int)drawPos.x, (int)drawPos.y, (int)ft.fontSize, textColor);
     }
 }

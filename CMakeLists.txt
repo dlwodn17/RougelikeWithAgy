@@ -26,7 +26,9 @@ set(SOURCES
     src/Systems/ElementalSystem.cpp
     src/Systems/WeatherSystem.cpp
     src/Systems/CombatSystem.cpp
+    src/Core/Localization.cpp
     src/Renderer/ParticleSystem.cpp
+    src/Renderer/FontManager.cpp
     src/Renderer/WeatherRenderer.cpp
     src/Renderer/CombatRenderer.cpp
     src/Renderer/UIRenderer.cpp
