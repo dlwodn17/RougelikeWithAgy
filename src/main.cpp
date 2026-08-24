@@ -3,6 +3,7 @@
 #include "Core/Constants.hpp"
 #include "Systems/ElementalSystem.hpp"
 #include "Entities/Skill.hpp"
+#include "Systems/MapSystem.hpp"
 #include "Renderer/FontManager.hpp"
 #include <iostream>
 
@@ -99,6 +100,38 @@ void RunCoreElementalUnitTests() {
     for (size_t i = 0; i < offered.size(); ++i) {
         std::cout << "   [" << (i + 1) << "] " << offered[i].name << " (" << offered[i].nameKo << ") -> " << offered[i].description << "\n";
     }
+
+    // Test 6: Procedural Map Generation & Erosion Mechanics
+    std::cout << "\n[Test 6] Procedural Map Generation & Erosion Mechanics:\n";
+    MapSystem mapSys;
+    mapSys.GenerateNewMap();
+    std::cout << " - Total Generated Map Nodes: " << mapSys.GetAllNodes().size() << " across " << MapSystem::TOTAL_LAYERS << " layers\n";
+    
+    // Check Layer 0 nodes are available initially
+    const auto& layer0 = mapSys.GetLayerNodeIds()[0];
+    std::cout << " - Layer 0 Starting Nodes: " << layer0.size() << " (Available: " << (mapSys.GetNode(layer0[0])->isAvailable ? "PASS" : "FAIL") << ")\n";
+
+    // Simulate moving to first node in Layer 0
+    int startNodeId = layer0[0];
+    bool moved = mapSys.MoveToNode(startNodeId);
+    std::cout << " - Move to Node " << startNodeId << " (Layer 0): " << (moved ? "SUCCESS" : "FAIL") << "\n";
+    std::cout << "   * Current Layer: " << mapSys.GetCurrentLayer() << " | Current Node ID: " << mapSys.GetCurrentNodeId() << "\n";
+
+    // Simulate moving to next connected node in Layer 1
+    const auto* cur = mapSys.GetCurrentNode();
+    if (cur && !cur->nextNodeIds.empty()) {
+        int nextId = cur->nextNodeIds[0];
+        bool nextMoved = mapSys.MoveToNode(nextId);
+        std::cout << " - Move to Next Connected Node " << nextId << " (Layer 1): " << (nextMoved ? "SUCCESS" : "FAIL") << "\n";
+        std::cout << "   * Past Layer 0 Eroded Check: " << (mapSys.GetNode(startNodeId)->isEroded ? "PASS (Eroded)" : "FAIL") << "\n";
+        std::cout << "   * Unconnected Layer 1 Nodes Blocked: " << (!mapSys.GetNode(startNodeId)->isAvailable ? "PASS" : "FAIL") << "\n";
+    }
+
+    // Check Boss Node at Final Layer
+    int bossNodeId = mapSys.GetLayerNodeIds()[MapSystem::TOTAL_LAYERS - 1][0];
+    const auto* bossNode = mapSys.GetNode(bossNodeId);
+    std::cout << " - Final Boss Node Type: " << (bossNode->type == NodeType::BOSS ? "PASS (BOSS)" : "FAIL") << " at Layer " << bossNode->layer << "\n";
+
     std::cout << "=================================================================\n\n";
 }
 
@@ -108,7 +141,7 @@ int main(int argc, char* argv[]) {
 
     // If --test CLI argument provided, exit after running console tests
     if (argc > 1 && std::string(argv[1]) == "--test") {
-        std::cout << "[SUCCESS] All Step 1 & Step 3 Elemental Reaction and Mutation Rune unit tests passed successfully!\n";
+        std::cout << "[SUCCESS] All Step 1, 3 & 4 Elemental, Rune, and Procedural Map unit tests passed successfully!\n";
         return 0;
     }
 

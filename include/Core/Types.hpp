@@ -123,9 +123,12 @@ using TurnState = CombatPhase;
 
 enum class AppState {
     TITLE = 0,
+    MAP_NAVIGATION,
     BATTLE,
     REWARD_SCREEN,
     REWARD = REWARD_SCREEN,
+    REST_SCREEN,
+    SHRINE_SCREEN,
     VICTORY,
     GAME_OVER,
     SETTINGS,

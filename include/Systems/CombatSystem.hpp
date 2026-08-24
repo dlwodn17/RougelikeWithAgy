@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Constants.hpp"
+#include "Core/MapTypes.hpp"
 #include "Entities/Player.hpp"
 #include "Entities/Enemy.hpp"
 #include "Systems/WeatherSystem.hpp"
@@ -25,6 +26,9 @@ private:
     int maxWaves;
     int turnCounter;
 
+    NodeType currentEncounterType;
+    int currentErosionRisk;
+
     std::vector<CombatLogEntry> combatLog;
 
 public:
@@ -34,6 +38,7 @@ public:
 
     void InitializeNewRun();
     void StartWave(int waveNumber);
+    void StartNodeBattle(NodeType nodeType, int layer, int erosionRisk = 0);
     void Update(float dt);
 
     // Player Input Handlers
@@ -73,6 +78,8 @@ public:
     int GetCurrentWave() const { return currentWave; }
     int GetMaxWaves() const { return maxWaves; }
     int GetTurnCounter() const { return turnCounter; }
+    NodeType GetCurrentEncounterType() const { return currentEncounterType; }
+    int GetCurrentErosionRisk() const { return currentErosionRisk; }
 
     const std::vector<CombatLogEntry>& GetCombatLog() const { return combatLog; }
     void AddCombatLog(const std::string& text, ColorRGBA color = { 255, 255, 255, 255 });

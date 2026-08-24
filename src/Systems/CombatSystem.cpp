@@ -41,63 +41,110 @@ void CombatSystem::InitializeNewRun() {
     StartWave(currentWave);
 }
 
-void CombatSystem::StartWave(int waveNumber) {
-    currentWave = waveNumber;
+void CombatSystem::StartNodeBattle(NodeType nodeType, int layer, int erosionRisk) {
+    currentEncounterType = nodeType;
+    currentErosionRisk = erosionRisk;
+    currentWave = layer + 1;
+    turnCounter = 1;
     enemies.clear();
     selectedTargetIndex = 0;
+    player.ResetShield();
+    player.ResetCooldowns();
 
-    if (waveNumber == 1) {
-        if (Localization::IsKorean()) AddCombatLog("--- 제 1 / 3 웨이브: 견습 마법사 & 슬라임 ---", ColorRGBA{ 52, 152, 219, 255 });
-        else AddCombatLog("--- WAVE 1 / 3: Apprentice & Slime ---", ColorRGBA{ 52, 152, 219, 255 });
-        
-        Enemy slime("Aquamancer Slime", "Aquamancer Slime", 45, ColorRGBA{ 52, 152, 219, 255 }, 1);
-        slime.SetPosition(1260.0f, 470.0f);
-
-        Enemy pyro("Pyromancer", "Pyromancer", 55, ColorRGBA{ 231, 76, 60, 255 }, 1);
-        pyro.SetPosition(2040.0f, 470.0f);
-
-        enemies.push_back(slime);
-        enemies.push_back(pyro);
-    } else if (waveNumber == 2) {
-        if (Localization::IsKorean()) AddCombatLog("--- 제 2 / 3 웨이브: 폭풍 & 서리 선봉대 ---", ColorRGBA{ 155, 89, 182, 255 });
-        else AddCombatLog("--- WAVE 2 / 3: Storm & Frost Vanguard ---", ColorRGBA{ 155, 89, 182, 255 });
-
-        Enemy slime("Aquamancer Slime", "Aquamancer Slime", 55, ColorRGBA{ 52, 152, 219, 255 }, 2);
-        slime.SetPosition(1005.0f, 470.0f);
-
-        Enemy harpy("Storm Harpy", "Storm Harpy", 65, ColorRGBA{ 241, 196, 15, 255 }, 2);
-        harpy.SetPosition(1605.0f, 470.0f);
-
-        Enemy golem("Frost Golem", "Frost Golem", 85, ColorRGBA{ 162, 222, 255, 255 }, 2);
-        golem.SetPosition(2205.0f, 470.0f);
-
-        enemies.push_back(slime);
-        enemies.push_back(harpy);
-        enemies.push_back(golem);
-    } else {
-        if (Localization::IsKorean()) AddCombatLog("--- 제 3 / 3 웨이브: [보스] 원소의 아콘 ---", ColorRGBA{ 231, 76, 60, 255 });
-        else AddCombatLog("--- WAVE 3 / 3: BOSS: Elemental Archon ---", ColorRGBA{ 231, 76, 60, 255 });
-
-        Enemy harpy("Storm Minion", "Storm Harpy", 60, ColorRGBA{ 241, 196, 15, 255 }, 3);
-        harpy.SetPosition(1005.0f, 470.0f);
-
-        Enemy boss("Elemental Archon", "Elemental Archon", 180, ColorRGBA{ 230, 126, 34, 255 }, 3);
-        boss.SetPosition(1605.0f, 470.0f);
-
-        Enemy pyro("Pyro Minion", "Pyromancer", 65, ColorRGBA{ 231, 76, 60, 255 }, 3);
-        pyro.SetPosition(2205.0f, 470.0f);
-
-        enemies.push_back(harpy);
-        enemies.push_back(boss);
-        enemies.push_back(pyro);
+    if (particleSystem) {
+        particleSystem->ClearAll();
     }
 
-    // Decide initial enemy intents
+    float statMultiplier = (erosionRisk > 0) ? 1.25f : 1.0f;
+
+    if (nodeType == NodeType::BOSS) {
+        if (Localization::IsKorean()) {
+            AddCombatLog("=== 👑 [최종 보스 조우] 원소의 아콘 (Elemental Archon) ===", ColorRGBA{ 241, 196, 15, 255 });
+            AddCombatLog("탑의 정상에 도달했습니다! 모든 원소를 자유자재로 다루는 고대 아콘을 격파하세요!", ColorRGBA{ 230, 126, 34, 255 });
+        } else {
+            AddCombatLog("=== 👑 [FINAL BOSS ENCOUNTER] Elemental Archon ===", ColorRGBA{ 241, 196, 15, 255 });
+            AddCombatLog("You have reached the pinnacle! Defeat the ancient master of elements!", ColorRGBA{ 230, 126, 34, 255 });
+        }
+
+        Enemy minion1("Storm Minion", "Storm Harpy", static_cast<int>(65 * statMultiplier), ColorRGBA{ 241, 196, 15, 255 }, 3);
+        minion1.SetPosition(1005.0f, 470.0f);
+
+        Enemy boss("Elemental Archon", "Elemental Archon", static_cast<int>(220 * statMultiplier), ColorRGBA{ 230, 126, 34, 255 }, 3);
+        boss.SetPosition(1605.0f, 470.0f);
+
+        Enemy minion2("Pyro Minion", "Pyromancer", static_cast<int>(70 * statMultiplier), ColorRGBA{ 231, 76, 60, 255 }, 3);
+        minion2.SetPosition(2205.0f, 470.0f);
+
+        enemies.push_back(minion1);
+        enemies.push_back(boss);
+        enemies.push_back(minion2);
+    } else if (nodeType == NodeType::ELITE) {
+        if (Localization::IsKorean()) {
+            AddCombatLog("=== ☠️ [엘리트 전투] 강력한 수호자와의 결투 ===", ColorRGBA{ 231, 76, 60, 255 });
+            if (erosionRisk > 0) AddCombatLog("⚠️ [침식 격류] 침식 에너지로 인해 적의 능력치가 25% 강화되었습니다! (희귀 룬 드랍)", ColorRGBA{ 155, 89, 182, 255 });
+        } else {
+            AddCombatLog("=== ☠️ [ELITE BATTLE] Powerful Guardian Encounter ===", ColorRGBA{ 231, 76, 60, 255 });
+            if (erosionRisk > 0) AddCombatLog("⚠️ [Erosion Surge] Enemy stats increased by +25%! (Enhanced Rune Rewards)", ColorRGBA{ 155, 89, 182, 255 });
+        }
+
+        Enemy golem("Frost Golem", "Frost Golem", static_cast<int>(110 * statMultiplier), ColorRGBA{ 162, 222, 255, 255 }, 2);
+        golem.SetPosition(1260.0f, 470.0f);
+
+        Enemy pyro("Pyromancer", "Pyromancer", static_cast<int>(80 * statMultiplier), ColorRGBA{ 231, 76, 60, 255 }, 2);
+        pyro.SetPosition(2040.0f, 470.0f);
+
+        enemies.push_back(golem);
+        enemies.push_back(pyro);
+    } else { // Standard COMBAT
+        if (Localization::IsKorean()) {
+            AddCombatLog("=== ⚔️ [일반 전투] 제 " + std::to_string(layer + 1) + " 층 침입자 격퇴 ===", ColorRGBA{ 52, 152, 219, 255 });
+        } else {
+            AddCombatLog("=== ⚔️ [COMBAT] Floor " + std::to_string(layer + 1) + " Encounter ===", ColorRGBA{ 52, 152, 219, 255 });
+        }
+
+        if (layer == 0) {
+            Enemy slime("Aquamancer Slime", "Aquamancer Slime", 45, ColorRGBA{ 52, 152, 219, 255 }, 1);
+            slime.SetPosition(1260.0f, 470.0f);
+
+            Enemy pyro("Pyromancer", "Pyromancer", 55, ColorRGBA{ 231, 76, 60, 255 }, 1);
+            pyro.SetPosition(2040.0f, 470.0f);
+
+            enemies.push_back(slime);
+            enemies.push_back(pyro);
+        } else if (layer <= 2) {
+            Enemy slime("Aquamancer Slime", "Aquamancer Slime", static_cast<int>(55 * statMultiplier), ColorRGBA{ 52, 152, 219, 255 }, 2);
+            slime.SetPosition(1260.0f, 470.0f);
+
+            Enemy harpy("Storm Harpy", "Storm Harpy", static_cast<int>(65 * statMultiplier), ColorRGBA{ 241, 196, 15, 255 }, 2);
+            harpy.SetPosition(2040.0f, 470.0f);
+
+            enemies.push_back(slime);
+            enemies.push_back(harpy);
+        } else {
+            Enemy slime("Aquamancer Slime", "Aquamancer Slime", static_cast<int>(60 * statMultiplier), ColorRGBA{ 52, 152, 219, 255 }, 2);
+            slime.SetPosition(1005.0f, 470.0f);
+
+            Enemy harpy("Storm Harpy", "Storm Harpy", static_cast<int>(70 * statMultiplier), ColorRGBA{ 241, 196, 15, 255 }, 2);
+            harpy.SetPosition(1605.0f, 470.0f);
+
+            Enemy pyro("Pyromancer", "Pyromancer", static_cast<int>(65 * statMultiplier), ColorRGBA{ 231, 76, 60, 255 }, 2);
+            pyro.SetPosition(2205.0f, 470.0f);
+
+            enemies.push_back(slime);
+            enemies.push_back(harpy);
+            enemies.push_back(pyro);
+        }
+    }
+
     for (auto& enemy : enemies) {
         enemy.DecideIntent(turnCounter, player, weatherSystem.GetCurrentWeather());
     }
 
     currentPhase = CombatPhase::PLAYER_INPUT;
+}
+
+void CombatSystem::StartWave(int waveNumber) {
+    StartNodeBattle((waveNumber >= maxWaves) ? NodeType::BOSS : ((waveNumber == 2) ? NodeType::ELITE : NodeType::COMBAT), waveNumber - 1, 0);
 }
 
 void CombatSystem::AddCombatLog(const std::string& text, ColorRGBA color) {

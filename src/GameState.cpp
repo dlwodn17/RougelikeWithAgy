@@ -12,6 +12,7 @@ void GameManager::Initialize() {
     rewardSystem.InitializeRunePool();
     combatSystem.SetParticleSystem(&particleSystem);
     combatSystem.InitializeNewRun();
+    mapSystem.GenerateNewMap();
 }
 
 void GameManager::Update(float dt) {
@@ -138,9 +139,9 @@ void GameManager::Update(float dt) {
         return;
     }
 
-    // Check Header Button Clicks during BATTLE or TITLE
+    // Check Header Button Clicks during BATTLE, TITLE, or MAP
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        if (state == AppState::BATTLE) {
+        if (state == AppState::BATTLE || state == AppState::MAP_NAVIGATION) {
             Rectangle langRec = { (float)uiRenderer.GetVirtualWidth() - 870.0f, 35.0f, 170.0f, 80.0f };
             Rectangle helpRec = { (float)uiRenderer.GetVirtualWidth() - 680.0f, 35.0f, 200.0f, 80.0f };
             Rectangle optRec = { (float)uiRenderer.GetVirtualWidth() - 460.0f, 35.0f, 210.0f, 80.0f };
@@ -189,7 +190,8 @@ void GameManager::Update(float dt) {
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
                 rewardSystem.Reset();
                 combatSystem.InitializeNewRun();
-                state = AppState::BATTLE;
+                mapSystem.GenerateNewMap();
+                state = AppState::MAP_NAVIGATION;
             }
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                 float titleX = (float)uiRenderer.GetVirtualWidth() * 0.5f - 650.0f;
@@ -197,7 +199,126 @@ void GameManager::Update(float dt) {
                 if (CheckCollisionPointRec(mousePos, startRec)) {
                     rewardSystem.Reset();
                     combatSystem.InitializeNewRun();
-                    state = AppState::BATTLE;
+                    mapSystem.GenerateNewMap();
+                    state = AppState::MAP_NAVIGATION;
+                }
+            }
+            break;
+
+        case AppState::MAP_NAVIGATION:
+            mapSystem.Update(dt);
+            particleSystem.Update(dt, combatSystem.GetWeatherSystem().GetCurrentWeather());
+
+            // Node Selection Input
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                const auto& nodes = mapSystem.GetAllNodes();
+                for (const auto& node : nodes) {
+                    if (node.isAvailable && !node.isEroded) {
+                        Vector2 center = { node.posX, node.posY };
+                        if (CheckCollisionPointCircle(mousePos, center, node.radius)) {
+                            int targetId = node.id;
+                            NodeType nType = node.type;
+                            int nLayer = node.layer;
+                            int nRisk = node.erosionRisk;
+
+                            mapSystem.MoveToNode(targetId);
+
+                            if (nType == NodeType::COMBAT || nType == NodeType::ELITE || nType == NodeType::BOSS) {
+                                combatSystem.StartNodeBattle(nType, nLayer, nRisk);
+                                state = AppState::BATTLE;
+                            } else if (nType == NodeType::REST_SITE) {
+                                state = AppState::REST_SCREEN;
+                            } else if (nType == NodeType::WEATHER_SHRINE) {
+                                state = AppState::SHRINE_SCREEN;
+                            }
+                            return;
+                        }
+                    }
+                }
+            }
+            break;
+
+        case AppState::REST_SCREEN:
+            particleSystem.Update(dt, combatSystem.GetWeatherSystem().GetCurrentWeather());
+
+            // Hotkeys: [1] Heal, [2] Cleanse / Meditate
+            if (IsKeyPressed(KEY_ONE)) {
+                mapSystem.PerformRestHeal(combatSystem.GetPlayer());
+                state = AppState::MAP_NAVIGATION;
+                return;
+            }
+            if (IsKeyPressed(KEY_TWO)) {
+                mapSystem.PerformRestCleanse(combatSystem.GetSkillSystem(), 0);
+                state = AppState::MAP_NAVIGATION;
+                return;
+            }
+
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                float w = (float)uiRenderer.GetVirtualWidth();
+                float cardW = 660.0f;
+                float cardH = 680.0f;
+                float startX = (w - (2.0f * cardW + 80.0f)) * 0.5f;
+                float startY = 320.0f;
+
+                Rectangle card1Rec = { startX, startY, cardW, cardH };
+                Rectangle card2Rec = { startX + cardW + 80.0f, startY, cardW, cardH };
+
+                if (CheckCollisionPointRec(mousePos, card1Rec)) {
+                    mapSystem.PerformRestHeal(combatSystem.GetPlayer());
+                    state = AppState::MAP_NAVIGATION;
+                    return;
+                }
+                if (CheckCollisionPointRec(mousePos, card2Rec)) {
+                    mapSystem.PerformRestCleanse(combatSystem.GetSkillSystem(), 0);
+                    state = AppState::MAP_NAVIGATION;
+                    return;
+                }
+            }
+            break;
+
+        case AppState::SHRINE_SCREEN:
+            particleSystem.Update(dt, combatSystem.GetWeatherSystem().GetCurrentWeather());
+
+            // Hotkeys: [1] Rain, [2] Heatwave, [3] Blizzard, [4] Storm
+            if (IsKeyPressed(KEY_ONE)) {
+                mapSystem.PerformShrineWeatherSet(combatSystem.GetWeatherSystem(), WeatherType::RAIN);
+                state = AppState::MAP_NAVIGATION;
+                return;
+            }
+            if (IsKeyPressed(KEY_TWO)) {
+                mapSystem.PerformShrineWeatherSet(combatSystem.GetWeatherSystem(), WeatherType::HEATWAVE);
+                state = AppState::MAP_NAVIGATION;
+                return;
+            }
+            if (IsKeyPressed(KEY_THREE)) {
+                mapSystem.PerformShrineWeatherSet(combatSystem.GetWeatherSystem(), WeatherType::BLIZZARD);
+                state = AppState::MAP_NAVIGATION;
+                return;
+            }
+            if (IsKeyPressed(KEY_FOUR)) {
+                mapSystem.PerformShrineWeatherSet(combatSystem.GetWeatherSystem(), WeatherType::STORM);
+                state = AppState::MAP_NAVIGATION;
+                return;
+            }
+
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                float w = (float)uiRenderer.GetVirtualWidth();
+                float cardW = 540.0f;
+                float cardH = 820.0f;
+                float spacing = 35.0f;
+                float totalW = 4.0f * cardW + 3.0f * spacing;
+                float startX = (w - totalW) * 0.5f;
+                float startY = 260.0f;
+
+                WeatherType weathers[4] = { WeatherType::RAIN, WeatherType::HEATWAVE, WeatherType::BLIZZARD, WeatherType::STORM };
+
+                for (int i = 0; i < 4; ++i) {
+                    Rectangle cardRec = { startX + (float)i * (cardW + spacing), startY, cardW, cardH };
+                    if (CheckCollisionPointRec(mousePos, cardRec)) {
+                        mapSystem.PerformShrineWeatherSet(combatSystem.GetWeatherSystem(), weathers[i]);
+                        state = AppState::MAP_NAVIGATION;
+                        return;
+                    }
                 }
             }
             break;
@@ -283,12 +404,8 @@ void GameManager::Update(float dt) {
 
             // Check if CombatSystem entered victory or defeat
             if (combatSystem.GetPhase() == CombatPhase::VICTORY_SCREEN) {
-                if (combatSystem.GetCurrentWave() < combatSystem.GetMaxWaves()) {
-                    rewardSystem.GenerateRewardRunes(3);
-                    state = AppState::REWARD_SCREEN;
-                } else {
-                    state = AppState::VICTORY;
-                }
+                rewardSystem.GenerateRewardRunes(3);
+                state = AppState::REWARD_SCREEN;
             } else if (combatSystem.GetPhase() == CombatPhase::DEFEAT_SCREEN) {
                 state = AppState::GAME_OVER;
             }
@@ -297,6 +414,8 @@ void GameManager::Update(float dt) {
             if (IsKeyPressed(KEY_R)) {
                 rewardSystem.Reset();
                 combatSystem.RestartGame();
+                mapSystem.GenerateNewMap();
+                state = AppState::MAP_NAVIGATION;
             }
             break;
 
@@ -330,28 +449,32 @@ void GameManager::Update(float dt) {
                 if (IsKeyPressed(KEY_ESCAPE)) {
                     rewardSystem.CancelSelection();
                 }
+                auto advancePostReward = [&]() {
+                    if (combatSystem.GetCurrentEncounterType() == NodeType::BOSS) {
+                        state = AppState::VICTORY;
+                    } else {
+                        state = AppState::MAP_NAVIGATION;
+                    }
+                };
+
                 if (IsKeyPressed(KEY_ONE)) {
                     rewardSystem.SocketRuneToSkill(combatSystem.GetSkillSystem(), 0);
-                    combatSystem.NextWave();
-                    state = AppState::BATTLE;
+                    advancePostReward();
                     return;
                 }
                 if (IsKeyPressed(KEY_TWO)) {
                     rewardSystem.SocketRuneToSkill(combatSystem.GetSkillSystem(), 1);
-                    combatSystem.NextWave();
-                    state = AppState::BATTLE;
+                    advancePostReward();
                     return;
                 }
                 if (IsKeyPressed(KEY_THREE)) {
                     rewardSystem.SocketRuneToSkill(combatSystem.GetSkillSystem(), 2);
-                    combatSystem.NextWave();
-                    state = AppState::BATTLE;
+                    advancePostReward();
                     return;
                 }
                 if (IsKeyPressed(KEY_FOUR)) {
                     rewardSystem.SocketRuneToSkill(combatSystem.GetSkillSystem(), 3);
-                    combatSystem.NextWave();
-                    state = AppState::BATTLE;
+                    advancePostReward();
                     return;
                 }
 
@@ -369,8 +492,7 @@ void GameManager::Update(float dt) {
                         Rectangle scRec = { startX + (float)i * (skillCardW + skillSpacing), startY, skillCardW, skillCardH };
                         if (CheckCollisionPointRec(mousePos, scRec)) {
                             rewardSystem.SocketRuneToSkill(combatSystem.GetSkillSystem(), i);
-                            combatSystem.NextWave();
-                            state = AppState::BATTLE;
+                            advancePostReward();
                             return;
                         }
                     }
@@ -388,24 +510,18 @@ void GameManager::Update(float dt) {
         case AppState::VICTORY:
             particleSystem.Update(dt, combatSystem.GetWeatherSystem().GetCurrentWeather());
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
-                if (combatSystem.GetCurrentWave() >= combatSystem.GetMaxWaves()) {
-                    rewardSystem.Reset();
-                    combatSystem.RestartGame();
-                } else {
-                    combatSystem.NextWave();
-                }
-                state = AppState::BATTLE;
+                rewardSystem.Reset();
+                combatSystem.RestartGame();
+                mapSystem.GenerateNewMap();
+                state = AppState::MAP_NAVIGATION;
             }
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                 Rectangle nextRec = { (float)uiRenderer.GetVirtualWidth() * 0.5f - 340.0f, (float)uiRenderer.GetVirtualHeight() * 0.5f - 350.0f + 480.0f, 680.0f, 90.0f };
                 if (CheckCollisionPointRec(mousePos, nextRec)) {
-                    if (combatSystem.GetCurrentWave() >= combatSystem.GetMaxWaves()) {
-                        rewardSystem.Reset();
-                        combatSystem.RestartGame();
-                    } else {
-                        combatSystem.NextWave();
-                    }
-                    state = AppState::BATTLE;
+                    rewardSystem.Reset();
+                    combatSystem.RestartGame();
+                    mapSystem.GenerateNewMap();
+                    state = AppState::MAP_NAVIGATION;
                 }
             }
             break;
@@ -415,14 +531,16 @@ void GameManager::Update(float dt) {
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
                 rewardSystem.Reset();
                 combatSystem.RestartGame();
-                state = AppState::BATTLE;
+                mapSystem.GenerateNewMap();
+                state = AppState::MAP_NAVIGATION;
             }
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                 Rectangle retryRec = { (float)uiRenderer.GetVirtualWidth() * 0.5f - 260.0f, (float)uiRenderer.GetVirtualHeight() * 0.5f - 350.0f + 480.0f, 520.0f, 90.0f };
                 if (CheckCollisionPointRec(mousePos, retryRec)) {
                     rewardSystem.Reset();
                     combatSystem.RestartGame();
-                    state = AppState::BATTLE;
+                    mapSystem.GenerateNewMap();
+                    state = AppState::MAP_NAVIGATION;
                 }
             }
             break;
@@ -433,7 +551,22 @@ void GameManager::Update(float dt) {
 }
 
 void GameManager::Draw() {
-    if (state == AppState::REWARD_SCREEN) {
+    if (state == AppState::MAP_NAVIGATION) {
+        MapRenderer::DrawMapScreen(mapSystem, combatSystem.GetPlayer(), combatSystem.GetWeatherSystem());
+        particleSystem.Draw();
+        if (showGuide) uiRenderer.DrawGuideOverlay();
+        if (showSettings) uiRenderer.DrawSettingsOverlay(selectedSettingIdx);
+    } else if (state == AppState::REST_SCREEN) {
+        MapRenderer::DrawRestScreen(combatSystem.GetPlayer(), combatSystem.GetSkillSystem());
+        particleSystem.Draw();
+        if (showGuide) uiRenderer.DrawGuideOverlay();
+        if (showSettings) uiRenderer.DrawSettingsOverlay(selectedSettingIdx);
+    } else if (state == AppState::SHRINE_SCREEN) {
+        MapRenderer::DrawShrineScreen(combatSystem.GetWeatherSystem());
+        particleSystem.Draw();
+        if (showGuide) uiRenderer.DrawGuideOverlay();
+        if (showSettings) uiRenderer.DrawSettingsOverlay(selectedSettingIdx);
+    } else if (state == AppState::REWARD_SCREEN) {
         CombatRenderer::DrawBackground(combatSystem.GetWeatherSystem().GetCurrentWeather());
         particleSystem.Draw();
         RewardRenderer::DrawRewardScreen(rewardSystem, combatSystem.GetSkillSystem());
